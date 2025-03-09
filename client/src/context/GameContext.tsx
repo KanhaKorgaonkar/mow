@@ -65,7 +65,8 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
           setLoadingProgress(Math.floor(progress * 100));
         },
         onMowed: (total: number) => {
-          setMowedArea(total);
+          // Slow down the counting by dividing the total area
+          setMowedArea(Math.floor(total / 5));
           setShowMowedFeedback(true);
           setTimeout(() => setShowMowedFeedback(false), 2000);
         },

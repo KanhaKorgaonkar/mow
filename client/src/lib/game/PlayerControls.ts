@@ -228,3 +228,131 @@ export class PlayerControls {
     }
   }
 }
+import * as THREE from 'three';
+
+export class PlayerControls {
+  private camera: THREE.Camera;
+  private domElement: HTMLElement;
+  private isLocked: boolean = false;
+  
+  private moveForward: boolean = false;
+  private moveBackward: boolean = false;
+  private moveLeft: boolean = false;
+  private moveRight: boolean = false;
+  
+  constructor(camera: THREE.Camera, domElement: HTMLElement) {
+    this.camera = camera;
+    this.domElement = domElement;
+    
+    // Setup event listeners
+    this.setupEventListeners();
+  }
+  
+  private setupEventListeners(): void {
+    // Keyboard controls
+    document.addEventListener('keydown', this.onKeyDown.bind(this));
+    document.addEventListener('keyup', this.onKeyUp.bind(this));
+    
+    // Mouse movement for looking around
+    document.addEventListener('pointerlockchange', this.onPointerLockChange.bind(this));
+    this.domElement.addEventListener('click', this.onClick.bind(this));
+    document.addEventListener('mousemove', this.onMouseMove.bind(this));
+  }
+  
+  private onKeyDown(event: KeyboardEvent): void {
+    if (!this.isLocked) return;
+    
+    switch (event.code) {
+      case 'KeyW':
+      case 'ArrowUp':
+        this.moveForward = true;
+        break;
+      case 'KeyS':
+      case 'ArrowDown':
+        this.moveBackward = true;
+        break;
+      case 'KeyA':
+      case 'ArrowLeft':
+        this.moveLeft = true;
+        break;
+      case 'KeyD':
+      case 'ArrowRight':
+        this.moveRight = true;
+        break;
+    }
+  }
+  
+  private onKeyUp(event: KeyboardEvent): void {
+    switch (event.code) {
+      case 'KeyW':
+      case 'ArrowUp':
+        this.moveForward = false;
+        break;
+      case 'KeyS':
+      case 'ArrowDown':
+        this.moveBackward = false;
+        break;
+      case 'KeyA':
+      case 'ArrowLeft':
+        this.moveLeft = false;
+        break;
+      case 'KeyD':
+      case 'ArrowRight':
+        this.moveRight = false;
+        break;
+    }
+  }
+  
+  private onPointerLockChange(): void {
+    this.isLocked = document.pointerLockElement === this.domElement;
+  }
+  
+  private onClick(): void {
+    if (!this.isLocked) {
+      this.domElement.requestPointerLock();
+    }
+  }
+  
+  private onMouseMove(event: MouseEvent): void {
+    if (!this.isLocked) return;
+    
+    // Only move the camera left/right a limited amount to simulate
+    // a third-person view from behind the mower
+    const movementX = event.movementX || 0;
+    this.camera.rotation.y -= movementX * 0.002;
+    
+    // Limit the camera rotation to prevent full 360 degree rotation
+    const maxAngle = Math.PI / 4; // 45 degrees
+    this.camera.rotation.y = Math.max(-maxAngle, Math.min(maxAngle, this.camera.rotation.y));
+  }
+  
+  public getControls(): { forward: boolean, backward: boolean, left: boolean, right: boolean } {
+    return {
+      forward: this.moveForward,
+      backward: this.moveBackward,
+      left: this.moveLeft,
+      right: this.moveRight
+    };
+  }
+  
+  public lock(): void {
+    if (!this.isLocked) {
+      this.domElement.requestPointerLock();
+    }
+  }
+  
+  public unlock(): void {
+    if (this.isLocked) {
+      document.exitPointerLock();
+    }
+  }
+  
+  public update(lawnMowerPosition: THREE.Vector3, lawnMowerRotation: number): void {
+    // Position camera behind the lawnmower
+    const offset = new THREE.Vector3(0, 1.5, -3);
+    offset.applyAxisAngle(new THREE.Vector3(0, 1, 0), lawnMowerRotation);
+    
+    this.camera.position.copy(lawnMowerPosition).add(offset);
+    this.camera.lookAt(lawnMowerPosition);
+  }
+}

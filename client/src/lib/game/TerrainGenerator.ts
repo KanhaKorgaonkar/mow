@@ -451,3 +451,65 @@ export class TerrainGenerator {
     this.initialize();
   }
 }
+import * as THREE from 'three';
+
+export class TerrainGenerator {
+  private scene: THREE.Scene;
+  private terrain: THREE.Mesh | null = null;
+  
+  constructor(scene: THREE.Scene) {
+    this.scene = scene;
+  }
+  
+  public initialize(): Promise<void> {
+    return new Promise((resolve) => {
+      // Create terrain
+      const terrainGeometry = new THREE.PlaneGeometry(100, 100, 32, 32);
+      const terrainMaterial = new THREE.MeshStandardMaterial({
+        color: 0x267F00,
+        roughness: 0.8,
+        metalness: 0.1
+      });
+      
+      this.terrain = new THREE.Mesh(terrainGeometry, terrainMaterial);
+      this.terrain.rotation.x = -Math.PI / 2; // Lay flat
+      this.terrain.position.y = 0; // Place exactly at zero
+      this.terrain.receiveShadow = true;
+      
+      this.scene.add(this.terrain);
+      
+      // Improve shadows
+      this.setupShadows();
+      
+      resolve();
+    });
+  }
+  
+  private setupShadows() {
+    const directionalLight = new THREE.DirectionalLight(0xffffff, 1);
+    directionalLight.position.set(50, 200, 100);
+    directionalLight.castShadow = true;
+    this.scene.add(directionalLight);
+    
+    // Improve shadow quality and positioning
+    const shadowSize = 50;
+    directionalLight.shadow.camera.left = -shadowSize;
+    directionalLight.shadow.camera.right = shadowSize;
+    directionalLight.shadow.camera.top = shadowSize;
+    directionalLight.shadow.camera.bottom = -shadowSize;
+    directionalLight.shadow.camera.near = 1;
+    directionalLight.shadow.camera.far = 500;
+    directionalLight.shadow.mapSize.width = 2048;
+    directionalLight.shadow.mapSize.height = 2048;
+    directionalLight.shadow.bias = -0.0003;
+  }
+  
+  public getTerrainHeight(x: number, z: number): number {
+    // Simple flat terrain for now
+    return 0;
+  }
+  
+  public reset(): void {
+    // Reset any terrain modifications here
+  }
+}

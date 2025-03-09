@@ -143,3 +143,108 @@ export class AudioManager {
     this.isMowerPlaying = false;
   }
 }
+import * as THREE from 'three';
+
+export class AudioManager {
+  private listener: THREE.AudioListener;
+  private mowerSound: THREE.Audio | null = null;
+  private ambientSound: THREE.Audio | null = null;
+  private initialized: boolean = false;
+  private audioLoader: THREE.AudioLoader;
+  
+  constructor() {
+    this.listener = new THREE.AudioListener();
+    this.audioLoader = new THREE.AudioLoader();
+    console.log("AudioManager created");
+  }
+  
+  public initialize(): Promise<void> {
+    console.log("AudioManager initializing...");
+    return new Promise((resolve, reject) => {
+      try {
+        // Create audio objects
+        this.mowerSound = new THREE.Audio(this.listener);
+        this.ambientSound = new THREE.Audio(this.listener);
+        
+        // Load mower sound with proper error handling
+        this.audioLoader.load('/audio/lawn-mower.mp3', (buffer) => {
+          if (this.mowerSound) {
+            this.mowerSound.setBuffer(buffer);
+            this.mowerSound.setLoop(true);
+            this.mowerSound.setVolume(0.3);
+          }
+          
+          // Load ambient sound
+          this.audioLoader.load('/audio/ambient.mp3', (buffer) => {
+            if (this.ambientSound) {
+              this.ambientSound.setBuffer(buffer);
+              this.ambientSound.setLoop(true);
+              this.ambientSound.setVolume(0.2);
+            }
+            
+            this.initialized = true;
+            console.log("AudioManager initialized");
+            resolve();
+          }, undefined, (error) => {
+            console.error("Error loading ambient sound:", error);
+            // Continue even if ambient sound fails
+            this.initialized = true;
+            resolve();
+          });
+        }, undefined, (error) => {
+          console.error("Error loading mower sound:", error);
+          // Continue even if mower sound fails
+          this.initialized = true;
+          resolve();
+        });
+      } catch (error) {
+        console.error("Error initializing AudioManager:", error);
+        reject(error);
+      }
+    });
+  }
+  
+  public getListener(): THREE.AudioListener {
+    return this.listener;
+  }
+  
+  public playMower(): void {
+    if (this.initialized && this.mowerSound && !this.mowerSound.isPlaying) {
+      this.mowerSound.play();
+    }
+  }
+  
+  public stopMower(): void {
+    if (this.initialized && this.mowerSound && this.mowerSound.isPlaying) {
+      this.mowerSound.stop();
+    }
+  }
+  
+  public playAmbient(): void {
+    if (this.initialized && this.ambientSound && !this.ambientSound.isPlaying) {
+      this.ambientSound.play();
+    }
+  }
+  
+  public pauseAll(): void {
+    if (this.initialized) {
+      if (this.mowerSound && this.mowerSound.isPlaying) {
+        this.mowerSound.pause();
+      }
+      if (this.ambientSound && this.ambientSound.isPlaying) {
+        this.ambientSound.pause();
+      }
+    }
+  }
+  
+  public resumeAll(): void {
+    if (this.initialized) {
+      if (this.mowerSound && !this.mowerSound.isPlaying) {
+        this.mowerSound.play();
+      }
+      if (this.ambientSound && !this.ambientSound.isPlaying) {
+        this.ambientSound.play();
+      }
+    }
+  }
+}
