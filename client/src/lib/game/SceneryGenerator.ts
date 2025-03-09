@@ -395,7 +395,9 @@ export class SceneryGenerator {
     
     // Add to scene and scenery objects
     this.scene.add(houseGroup);
-    this.sceneryObjects.push({
+    
+    // Create the scenery object
+    const houseObject: SceneryObject = {
       type: 'House',
       position: new THREE.Vector3(x, y, z),
       rotation,
@@ -403,7 +405,16 @@ export class SceneryGenerator {
       mesh: houseGroup,
       discovered: false,
       chunkKey
-    });
+    };
+    
+    // Add to global scenery objects list
+    this.sceneryObjects.push(houseObject);
+    
+    // Add to specific chunk objects list
+    const chunk = this.sceneryChunks.get(chunkKey);
+    if (chunk) {
+      chunk.objects.push(houseObject);
+    }
     
     return houseGroup;
   }
@@ -457,7 +468,9 @@ export class SceneryGenerator {
     
     // Add to scene and scenery objects
     this.scene.add(treeGroup);
-    this.sceneryObjects.push({
+    
+    // Create the scenery object
+    const treeObject: SceneryObject = {
       type: 'Tree',
       position: new THREE.Vector3(x, y, z),
       rotation: 0,
@@ -465,7 +478,16 @@ export class SceneryGenerator {
       mesh: treeGroup,
       discovered: false,
       chunkKey
-    });
+    };
+    
+    // Add to global scenery objects list
+    this.sceneryObjects.push(treeObject);
+    
+    // Add to specific chunk objects list
+    const chunk = this.sceneryChunks.get(chunkKey);
+    if (chunk) {
+      chunk.objects.push(treeObject);
+    }
     
     return treeGroup;
   }
@@ -582,7 +604,8 @@ export class SceneryGenerator {
       rotation: 0,
       scale: 1,
       mesh: gardenGroup,
-      discovered: false
+      discovered: false,
+      chunkKey
     });
     
     return gardenGroup;
@@ -636,7 +659,8 @@ export class SceneryGenerator {
       rotation,
       scale: 1,
       mesh: shedGroup,
-      discovered: false
+      discovered: false,
+      chunkKey
     });
     
     return shedGroup;
@@ -678,7 +702,8 @@ export class SceneryGenerator {
       rotation: 0,
       scale: 1,
       mesh: mailboxGroup,
-      discovered: false
+      discovered: false,
+      chunkKey
     });
     
     return mailboxGroup;
@@ -734,7 +759,8 @@ export class SceneryGenerator {
       rotation,
       scale: 1,
       mesh: benchGroup,
-      discovered: false
+      discovered: false,
+      chunkKey
     });
     
     return benchGroup;
@@ -776,8 +802,14 @@ export class SceneryGenerator {
             name = scenery.type;
         }
         
-        // Trigger discovery callback
-        this.onSceneryDiscovered(name);
+        // Check if this type has been discovered before
+        if (!this.discoveredTypes.has(scenery.type)) {
+          // Add to discovered types
+          this.discoveredTypes.add(scenery.type);
+          
+          // Trigger discovery callback only for first-time discoveries
+          this.onSceneryDiscovered(name);
+        }
         
         // Only report one discovery at a time
         break;
@@ -785,11 +817,18 @@ export class SceneryGenerator {
     }
   }
   
-  public reset() {
+  public async reset() {
     // Clear existing scenery
     this.clearScenery();
     
-    // Generate new scenery
-    this.generateScenery();
+    // Reset discovered types
+    this.discoveredTypes.clear();
+    
+    // Reset scene chunks
+    this.sceneryChunks.clear();
+    this.currentPlayerChunk = { x: 0, z: 0 };
+    
+    // Generate initial scenery around origin
+    await this.generateSceneryInArea(0, 0, this.loadDistance);
   }
 }
