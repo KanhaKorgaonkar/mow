@@ -12,13 +12,27 @@ interface SceneryObject {
   scale: number;
   mesh: THREE.Group;
   discovered: boolean;
+  chunkKey: string; // Identifies which chunk this object belongs to
+}
+
+// Chunk key format: "x,z"
+interface SceneryChunk {
+  key: string;
+  objects: SceneryObject[];
+  generated: boolean;
 }
 
 export class SceneryGenerator {
   private scene: THREE.Scene;
   private terrain: TerrainGenerator;
   private sceneryObjects: SceneryObject[] = [];
+  private sceneryChunks: Map<string, SceneryChunk> = new Map();
   private onSceneryDiscovered: (scenery: string) => void;
+  private chunkSize: number; // Size of each terrain chunk
+  private loadDistance: number = 2; // How many chunks to load in each direction
+  private currentPlayerChunk: { x: number, z: number } = { x: 0, z: 0 };
+  private discoveredTypes: Set<string> = new Set(); // Track already discovered scenery types
+  private seed: number = Date.now(); // Seed for deterministic generation
   
   constructor(
     scene: THREE.Scene,
@@ -28,80 +42,273 @@ export class SceneryGenerator {
     this.scene = scene;
     this.terrain = terrain;
     this.onSceneryDiscovered = onSceneryDiscovered;
+    this.chunkSize = terrain.getSize().width;
   }
   
   public async initialize() {
-    // Generate scenery objects
-    await this.generateScenery();
+    // Generate initial scenery around origin
+    await this.generateSceneryInArea(0, 0, this.loadDistance);
     return true;
   }
   
-  private async generateScenery() {
-    const terrainSize = this.terrain.getSize();
-    const halfWidth = terrainSize.width / 2;
-    const halfDepth = terrainSize.depth / 2;
+  // Pseudo-random number generator with seed
+  private random(x: number, z: number, salt: number = 0) {
+    const n = Math.sin(x * 12.9898 + z * 78.233 + salt * 43.5453 + this.seed) * 43758.5453;
+    return n - Math.floor(n);
+  }
+  
+  // Generate a deterministic angle based on position
+  private randomAngle(x: number, z: number, salt: number = 0) {
+    return this.random(x, z, salt) * Math.PI * 2;
+  }
+  
+  // Generate scenery in all chunks around the player
+  private async generateSceneryInArea(centerX: number, centerZ: number, radius: number) {
+    // Generate chunks in a square around player
+    for (let x = centerX - radius; x <= centerX + radius; x++) {
+      for (let z = centerZ - radius; z <= centerZ + radius; z++) {
+        await this.generateSceneryInChunk(x, z);
+      }
+    }
+  }
+  
+  // Update visible chunks based on player position
+  public async updateSceneryChunks(playerPosition: THREE.Vector3) {
+    // Calculate which chunk the player is in
+    const chunkX = Math.floor(playerPosition.x / this.chunkSize);
+    const chunkZ = Math.floor(playerPosition.z / this.chunkSize);
     
-    // Clear existing scenery
-    this.clearScenery();
-    
-    // Generate houses
-    const houseCount = 3;
-    for (let i = 0; i < houseCount; i++) {
-      // Place houses at random positions, but not too close to center
-      const distance = 20 + Math.random() * 20;
-      const angle = Math.random() * Math.PI * 2;
+    // If player moved to a new chunk, update visible chunks
+    if (chunkX !== this.currentPlayerChunk.x || chunkZ !== this.currentPlayerChunk.z) {
+      this.currentPlayerChunk = { x: chunkX, z: chunkZ };
       
-      const x = Math.cos(angle) * distance;
-      const z = Math.sin(angle) * distance;
-      const y = this.terrain.getHeightAt(x, z);
+      // Generate new chunks around player
+      await this.generateSceneryInArea(chunkX, chunkZ, this.loadDistance);
       
-      await this.createHouse(x, y, z, Math.random() * Math.PI * 2);
+      // Remove chunks that are too far away
+      this.removeDistantChunks(chunkX, chunkZ, this.loadDistance + 1);
     }
     
-    // Generate trees
-    const treeCount = 15;
-    for (let i = 0; i < treeCount; i++) {
-      const x = (Math.random() * terrainSize.width * 0.8) - (halfWidth * 0.8);
-      const z = (Math.random() * terrainSize.depth * 0.8) - (halfDepth * 0.8);
-      const y = this.terrain.getHeightAt(x, z);
-      
-      await this.createTree(x, y, z);
-    }
+    // Return all scenery objects for collision detection
+    return this.sceneryObjects;
+  }
+  
+  // Remove chunks that are too far from player
+  private removeDistantChunks(centerX: number, centerZ: number, maxDistance: number) {
+    const chunksToRemove: string[] = [];
     
-    // Generate fences
-    const fenceSegments = 40;
-    let fenceX = -15;
-    let fenceZ = -15;
-    let fenceDirection = 0; // 0 = right, 1 = down, 2 = left, 3 = up
+    this.sceneryChunks.forEach((chunk, key) => {
+      const [chunkX, chunkZ] = key.split(',').map(Number);
+      const distance = Math.max(
+        Math.abs(chunkX - centerX),
+        Math.abs(chunkZ - centerZ)
+      );
+      
+      if (distance > maxDistance) {
+        chunksToRemove.push(key);
+      }
+    });
     
-    for (let i = 0; i < fenceSegments; i++) {
-      const y = this.terrain.getHeightAt(fenceX, fenceZ);
-      
-      await this.createFence(fenceX, y, fenceZ, fenceDirection * Math.PI / 2);
-      
-      // Move to next fence position
-      if (fenceDirection === 0) fenceX += 2;
-      else if (fenceDirection === 1) fenceZ += 2;
-      else if (fenceDirection === 2) fenceX -= 2;
-      else if (fenceDirection === 3) fenceZ -= 2;
-      
-      // Change direction to create rectangle
-      if ((i + 1) % 10 === 0) {
-        fenceDirection = (fenceDirection + 1) % 4;
+    // Remove distant chunks
+    chunksToRemove.forEach(key => {
+      const chunk = this.sceneryChunks.get(key);
+      if (chunk) {
+        // Remove all objects in this chunk from the scene
+        chunk.objects.forEach(obj => {
+          this.scene.remove(obj.mesh);
+          
+          // Also remove from sceneryObjects array
+          const index = this.sceneryObjects.findIndex(o => o === obj);
+          if (index >= 0) {
+            this.sceneryObjects.splice(index, 1);
+          }
+        });
+        
+        // Remove chunk from map
+        this.sceneryChunks.delete(key);
+      }
+    });
+  }
+  
+  // Generate scenery in a specific chunk
+  private async generateSceneryInChunk(chunkX: number, chunkZ: number) {
+    const chunkKey = `${chunkX},${chunkZ}`;
+    
+    // Check if chunk already exists
+    if (this.sceneryChunks.has(chunkKey)) {
+      const chunk = this.sceneryChunks.get(chunkKey);
+      if (chunk && chunk.generated) {
+        return; // Already generated
       }
     }
     
-    // Generate garden
-    await this.createGarden(10, this.terrain.getHeightAt(10, 10), 10);
+    // Create new chunk if it doesn't exist
+    if (!this.sceneryChunks.has(chunkKey)) {
+      this.sceneryChunks.set(chunkKey, {
+        key: chunkKey,
+        objects: [],
+        generated: false
+      });
+    }
     
-    // Generate shed
-    await this.createShed(-12, this.terrain.getHeightAt(-12, 8), 8, Math.PI / 4);
+    // Get chunk for adding objects
+    const chunk = this.sceneryChunks.get(chunkKey)!;
     
-    // Generate mailbox
-    await this.createMailbox(15, this.terrain.getHeightAt(15, -15), -15);
+    // Calculate chunk boundaries
+    const startX = chunkX * this.chunkSize;
+    const startZ = chunkZ * this.chunkSize;
     
-    // Generate bench
-    await this.createBench(5, this.terrain.getHeightAt(5, -10), -10, Math.PI);
+    // Use deterministic randomness based on chunk position
+    const randomValue = this.random(chunkX, chunkZ);
+    
+    // Determine what to generate in this chunk
+    const features = [];
+    
+    // Every chunk has a different set of features
+    if (randomValue < 0.3) {
+      // 30% chance for a house
+      features.push('house');
+    }
+    
+    if (randomValue < 0.7) {
+      // 70% chance for trees (5-10 trees per chunk)
+      const treeCount = 5 + Math.floor(this.random(chunkX, chunkZ, 1) * 5);
+      features.push({ type: 'tree', count: treeCount });
+    }
+    
+    if (randomValue > 0.4 && randomValue < 0.5) {
+      // 10% chance for a garden
+      features.push('garden');
+    }
+    
+    if (randomValue > 0.5 && randomValue < 0.6) {
+      // 10% chance for a shed
+      features.push('shed');
+    }
+    
+    if (randomValue > 0.9) {
+      // 10% chance for a mailbox
+      features.push('mailbox');
+    }
+    
+    if (randomValue > 0.7 && randomValue < 0.8) {
+      // 10% chance for a bench
+      features.push('bench');
+    }
+    
+    // 25% chance for a fence
+    if (randomValue > 0.75) {
+      features.push('fence');
+    }
+    
+    // Generate each feature
+    for (const feature of features) {
+      if (feature === 'house') {
+        // Place house at a semi-random position within the chunk
+        const houseX = startX + this.chunkSize * (0.3 + this.random(chunkX, chunkZ, 2) * 0.4);
+        const houseZ = startZ + this.chunkSize * (0.3 + this.random(chunkX, chunkZ, 3) * 0.4);
+        const houseY = this.terrain.getHeightAt(houseX, houseZ);
+        
+        // Skip if terrain is unsuitable (too high or too low)
+        if (houseY > 3 || houseY < 0.1) continue;
+        
+        const houseRotation = this.randomAngle(chunkX, chunkZ, 4);
+        await this.createHouse(houseX, houseY, houseZ, houseRotation, chunkKey);
+      }
+      else if (typeof feature === 'object' && feature.type === 'tree') {
+        // Generate trees
+        for (let i = 0; i < feature.count; i++) {
+          const treeX = startX + this.random(chunkX, chunkZ, 10 + i) * this.chunkSize;
+          const treeZ = startZ + this.random(chunkX, chunkZ, 20 + i) * this.chunkSize;
+          const treeY = this.terrain.getHeightAt(treeX, treeZ);
+          
+          // Skip if terrain is unsuitable
+          if (treeY > 4 || treeY < 0.1) continue;
+          
+          await this.createTree(treeX, treeY, treeZ, chunkKey);
+        }
+      }
+      else if (feature === 'garden') {
+        const gardenX = startX + this.chunkSize * (0.4 + this.random(chunkX, chunkZ, 5) * 0.2);
+        const gardenZ = startZ + this.chunkSize * (0.4 + this.random(chunkX, chunkZ, 6) * 0.2);
+        const gardenY = this.terrain.getHeightAt(gardenX, gardenZ);
+        
+        if (gardenY > 3 || gardenY < 0.1) continue;
+        
+        await this.createGarden(gardenX, gardenY, gardenZ, chunkKey);
+      }
+      else if (feature === 'shed') {
+        const shedX = startX + this.chunkSize * (0.2 + this.random(chunkX, chunkZ, 7) * 0.6);
+        const shedZ = startZ + this.chunkSize * (0.2 + this.random(chunkX, chunkZ, 8) * 0.6);
+        const shedY = this.terrain.getHeightAt(shedX, shedZ);
+        
+        if (shedY > 3 || shedY < 0.1) continue;
+        
+        const shedRotation = this.randomAngle(chunkX, chunkZ, 9);
+        await this.createShed(shedX, shedY, shedZ, shedRotation, chunkKey);
+      }
+      else if (feature === 'mailbox') {
+        const mailboxX = startX + this.chunkSize * (0.4 + this.random(chunkX, chunkZ, 10) * 0.2);
+        const mailboxZ = startZ + this.chunkSize * (0.1 + this.random(chunkX, chunkZ, 11) * 0.2);
+        const mailboxY = this.terrain.getHeightAt(mailboxX, mailboxZ);
+        
+        if (mailboxY > 3 || mailboxY < 0.1) continue;
+        
+        await this.createMailbox(mailboxX, mailboxY, mailboxZ, chunkKey);
+      }
+      else if (feature === 'bench') {
+        const benchX = startX + this.chunkSize * (0.3 + this.random(chunkX, chunkZ, 12) * 0.4);
+        const benchZ = startZ + this.chunkSize * (0.3 + this.random(chunkX, chunkZ, 13) * 0.4);
+        const benchY = this.terrain.getHeightAt(benchX, benchZ);
+        
+        if (benchY > 3 || benchY < 0.1) continue;
+        
+        const benchRotation = this.randomAngle(chunkX, chunkZ, 14);
+        await this.createBench(benchX, benchY, benchZ, benchRotation, chunkKey);
+      }
+      else if (feature === 'fence') {
+        // Create a fence line or enclosure
+        const fenceStartX = startX + this.chunkSize * (0.2 + this.random(chunkX, chunkZ, 15) * 0.6);
+        const fenceStartZ = startZ + this.chunkSize * (0.2 + this.random(chunkX, chunkZ, 16) * 0.6);
+        const fenceLength = 5 + Math.floor(this.random(chunkX, chunkZ, 17) * 15);
+        
+        let fenceX = fenceStartX;
+        let fenceZ = fenceStartZ;
+        let fenceDirection = Math.floor(this.random(chunkX, chunkZ, 18) * 4); // 0-3 for directions
+        
+        // Create fence segments
+        for (let i = 0; i < fenceLength; i++) {
+          const fenceY = this.terrain.getHeightAt(fenceX, fenceZ);
+          
+          if (fenceY <= 3 && fenceY >= 0.1) {
+            await this.createFence(fenceX, fenceY, fenceZ, fenceDirection * Math.PI / 2, chunkKey);
+          }
+          
+          // Move to next fence position
+          if (fenceDirection === 0) fenceX += 2;
+          else if (fenceDirection === 1) fenceZ += 2;
+          else if (fenceDirection === 2) fenceX -= 2;
+          else if (fenceDirection === 3) fenceZ -= 2;
+          
+          // Check if we're still in the chunk
+          const stillInChunk = 
+            fenceX >= startX && 
+            fenceX < startX + this.chunkSize &&
+            fenceZ >= startZ && 
+            fenceZ < startZ + this.chunkSize;
+          
+          if (!stillInChunk) break;
+          
+          // Occasionally change direction to create more interesting shapes
+          if (this.random(fenceX, fenceZ, i) < 0.2) {
+            fenceDirection = (fenceDirection + 1) % 4;
+          }
+        }
+      }
+    }
+    
+    // Mark chunk as generated
+    chunk.generated = true;
   }
   
   private clearScenery() {
