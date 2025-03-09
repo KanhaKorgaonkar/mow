@@ -189,9 +189,9 @@ export class LawnMower {
       const accel = this.direction.clone().multiplyScalar(this.acceleration * delta);
       this.velocity.add(accel);
     } else {
-      // Apply deceleration when not moving forward
+      // Apply stronger deceleration when not moving forward for a more responsive feel
       if (this.velocity.length() > 0.01) {
-        const decel = this.velocity.clone().normalize().multiplyScalar(-this.deceleration * delta);
+        const decel = this.velocity.clone().normalize().multiplyScalar(-this.deceleration * 1.2 * delta);
         this.velocity.add(decel);
         
         // Stop completely if very slow
@@ -204,7 +204,15 @@ export class LawnMower {
     // A/D = Turn while moving or stationary
     // Turning rate is higher when stationary for more responsive controls
     const baseTurnRate = this.rotationSpeed * delta;
-    const turningFactor = this.velocity.length() < 0.1 ? 1.5 : 1.0; // Faster turning when stationary
+    
+    // Enhanced turning factor: significantly faster turning when stationary, 
+    // more moderate when moving slowly, and standard when at speed
+    let turningFactor = 1.0; 
+    if (this.velocity.length() < 0.1) {
+      turningFactor = 2.0; // Much faster turning when completely stopped
+    } else if (this.velocity.length() < 1.0) {
+      turningFactor = 1.5; // Enhanced turning at slow speeds
+    }
     
     if (this.turnLeftActive && !this.turnRightActive) {
       // Simple left turning - directly rotate the direction and mower

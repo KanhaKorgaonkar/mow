@@ -35,21 +35,16 @@ export class PlayerControls {
   }
   
   private initKeyboardControls() {
-    // Keyboard controls - Using WAD control scheme:
-    // W: Move forward
+    // Keyboard controls - Using pure WAD control scheme:
+    // W: Move forward only
     // A: Turn left
     // D: Turn right
-    // S: Move backward (optional)
     // Also supporting arrow keys as alternatives
     const onKeyDown = (event: KeyboardEvent) => {
       switch (event.code) {
         case 'KeyW':
         case 'ArrowUp':
           this.moveForward = true;
-          break;
-        case 'KeyS':
-        case 'ArrowDown':
-          this.moveBackward = true;
           break;
         case 'KeyA':
         case 'ArrowLeft':
@@ -67,10 +62,6 @@ export class PlayerControls {
         case 'KeyW':
         case 'ArrowUp':
           this.moveForward = false;
-          break;
-        case 'KeyS':
-        case 'ArrowDown':
-          this.moveBackward = false;
           break;
         case 'KeyA':
         case 'ArrowLeft':
