@@ -216,8 +216,8 @@ export class LawnMower {
     // Update wheel angle for steering
     const turnDirection = direction === 'left' ? 1 : -1;
     
-    // How much to change wheel angle
-    this.physics.wheelAngle += turnDirection * this.wheelTurnSpeed * delta;
+    // How much to change wheel angle - increased for more responsive turning
+    this.physics.wheelAngle += turnDirection * this.wheelTurnSpeed * delta * 2.0;
     
     // Limit wheel angle
     this.physics.wheelAngle = Math.max(
@@ -226,15 +226,19 @@ export class LawnMower {
     );
     
     // Calculate turn amount based on speed and wheel angle
-    // The faster you go, the more effect turning has
     const speed = this.physics.velocity.length();
-    const turnAmount = this.physics.wheelAngle * 
-                      (speed / this.maxSpeed) * 
-                      this.turnInfluence * 
-                      delta;
     
-    // Update angular velocity (smooths out turning)
-    this.physics.angularVelocity = turnAmount * 2;
+    // Ensure minimum turning effect even at very low speeds
+    const effectiveSpeed = Math.max(speed, 0.5);
+    
+    // Increased turning effectiveness
+    const turnAmount = this.physics.wheelAngle * 
+                      ((effectiveSpeed / this.maxSpeed) + 0.2) * 
+                      this.turnInfluence * 
+                      delta * 1.5; // Increased turning multiplier
+    
+    // Update angular velocity with enhanced effect
+    this.physics.angularVelocity = turnAmount * 3;
     
     // Apply rotation to direction vector and object
     this.direction.applyAxisAngle(new THREE.Vector3(0, 1, 0), this.physics.angularVelocity);

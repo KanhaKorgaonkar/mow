@@ -205,7 +205,10 @@ export class GameManager {
       
       if (mowedThisFrame > 0) {
         this.totalAreaMowed += mowedThisFrame;
-        this.callbacks.onMowed(Math.min(Math.floor((this.totalAreaMowed / this.grassSystem.getTotalGrass()) * 100), 100));
+        
+        // Use square feet instead of percentage
+        const squareFeetMowed = this.grassSystem.getMowedSquareFeet();
+        this.callbacks.onMowed(squareFeetMowed);
         
         // Play mowing sound effect if grass was cut
         this.audioManager.playGrassCut();

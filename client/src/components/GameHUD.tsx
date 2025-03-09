@@ -91,7 +91,7 @@ export default function GameHUD({ onPause, weather, timeOfDay, mowedArea, mowerR
             <i className="fas fa-cut text-white"></i>
             <div className="text-white">
               <div className="text-xs">Mowed Area</div>
-              <div className="font-roboto-condensed font-bold">{mowedArea}% / 100%</div>
+              <div className="font-roboto-condensed font-bold">{mowedArea} sq ft</div>
             </div>
           </div>
         </div>
