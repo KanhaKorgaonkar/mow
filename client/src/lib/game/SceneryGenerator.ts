@@ -320,7 +320,7 @@ export class SceneryGenerator {
     this.sceneryObjects = [];
   }
   
-  private async createHouse(x: number, y: number, z: number, rotation: number) {
+  private async createHouse(x: number, y: number, z: number, rotation: number, chunkKey: string) {
     const houseGroup = new THREE.Group();
     
     // House types
@@ -401,13 +401,14 @@ export class SceneryGenerator {
       rotation,
       scale: 1,
       mesh: houseGroup,
-      discovered: false
+      discovered: false,
+      chunkKey
     });
     
     return houseGroup;
   }
   
-  private async createTree(x: number, y: number, z: number) {
+  private async createTree(x: number, y: number, z: number, chunkKey: string) {
     const treeGroup = new THREE.Group();
     
     // Tree types
@@ -462,13 +463,14 @@ export class SceneryGenerator {
       rotation: 0,
       scale: 1,
       mesh: treeGroup,
-      discovered: false
+      discovered: false,
+      chunkKey
     });
     
     return treeGroup;
   }
   
-  private async createFence(x: number, y: number, z: number, rotation: number) {
+  private async createFence(x: number, y: number, z: number, rotation: number, chunkKey: string) {
     const fenceGroup = new THREE.Group();
     
     // Fence material
@@ -514,13 +516,14 @@ export class SceneryGenerator {
       rotation,
       scale: 1,
       mesh: fenceGroup,
-      discovered: false
+      discovered: false,
+      chunkKey
     });
     
     return fenceGroup;
   }
   
-  private async createGarden(x: number, y: number, z: number) {
+  private async createGarden(x: number, y: number, z: number, chunkKey: string) {
     const gardenGroup = new THREE.Group();
     
     // Garden soil
@@ -585,7 +588,7 @@ export class SceneryGenerator {
     return gardenGroup;
   }
   
-  private async createShed(x: number, y: number, z: number, rotation: number) {
+  private async createShed(x: number, y: number, z: number, rotation: number, chunkKey: string) {
     const shedGroup = new THREE.Group();
     
     // Shed materials
@@ -639,7 +642,7 @@ export class SceneryGenerator {
     return shedGroup;
   }
   
-  private async createMailbox(x: number, y: number, z: number) {
+  private async createMailbox(x: number, y: number, z: number, chunkKey: string) {
     const mailboxGroup = new THREE.Group();
     
     // Mailbox materials
@@ -681,7 +684,7 @@ export class SceneryGenerator {
     return mailboxGroup;
   }
   
-  private async createBench(x: number, y: number, z: number, rotation: number) {
+  private async createBench(x: number, y: number, z: number, rotation: number, chunkKey: string) {
     const benchGroup = new THREE.Group();
     
     // Bench materials
