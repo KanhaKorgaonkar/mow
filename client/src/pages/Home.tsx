@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import StartScreen from "@/components/StartScreen";
 import GameCanvas from "@/components/GameCanvas";
-import GameHUD from "@/components/GameHUD";
+import GameHUD, { FallbackControlsInfo } from "@/components/GameHUD";
 import PauseMenu from "@/components/PauseMenu";
 import LoadingScreen from "@/components/LoadingScreen";
 import WeatherTransition from "@/components/WeatherTransition";
@@ -42,8 +42,6 @@ export default function Home() {
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [gameState, pauseGame, toggleMower]);
-
-  import { FallbackControlsInfo } from '../components/GameHUD';
 
 // Handle pointer lock for first-person control
   useEffect(() => {
