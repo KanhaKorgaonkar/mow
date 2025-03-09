@@ -30,13 +30,15 @@ export class AudioManager {
         volume: 0.4, // Lower volume to avoid overpowering
         rate: 0.9, // Slightly lower pitch for a more natural sound
         preload: true,
-        html5: true, // Try using HTML5 Audio for better compatibility
+        html5: false, // Use Web Audio API as the primary, fallback to HTML5 Audio
         onload: () => {
           console.log("Mower sound loaded successfully");
           this.soundsLoaded = true;
         },
         onloaderror: (id, error) => {
           console.error("Error loading mower sound:", error);
+          // Create a fallback silent sound so the game can continue without audio
+          this.soundsLoaded = true; // Mark as loaded even if there's an error
         },
         onplayerror: (id, error) => {
           console.error("Error playing mower sound:", error);
@@ -48,14 +50,17 @@ export class AudioManager {
         }
       });
       
-      // Create other sound effects based on the mower sound
+      // Create other sound effects based on the mower sound with better error handling
       this.sounds.grassCut = new Howl({
         src: ['/audio/lawnmower.mp3'],
         volume: 0.2,
         rate: 1.8,  // Higher pitch for a quick cut sound
-        html5: true,
+        html5: false, // Use Web Audio API for better performance
         sprite: {
           short: [2000, 300] // Create a 300ms sprite starting at 2 seconds in
+        },
+        onloaderror: (id, error) => {
+          console.log("Non-critical: Error loading grass cut sound");
         }
       });
       
@@ -63,9 +68,12 @@ export class AudioManager {
         src: ['/audio/lawnmower.mp3'],
         volume: 0.3,
         rate: 0.6,  // Lower pitch for discovery sound
-        html5: true,
+        html5: false, // Use Web Audio API for better performance
         sprite: {
           medium: [0, 800] // Create an 800ms sprite for medium length
+        },
+        onloaderror: (id, error) => {
+          console.log("Non-critical: Error loading discovery sound");
         }
       });
       
@@ -75,7 +83,10 @@ export class AudioManager {
         volume: 0.1,
         rate: 0.4,  // Much lower pitch for rain effect
         loop: true,
-        html5: true
+        html5: false, // Use Web Audio API for better performance
+        onloaderror: (id, error) => {
+          console.log("Non-critical: Error loading rain sound");
+        }
       });
       
       // Thunder sound effect
@@ -83,9 +94,12 @@ export class AudioManager {
         src: ['/audio/lawnmower.mp3'],
         volume: 0.2,
         rate: 0.3,  // Very low pitch for thunder
-        html5: true,
+        html5: false, // Use Web Audio API for better performance
         sprite: {
           rumble: [1000, 2000] // 2 second rumble
+        },
+        onloaderror: (id, error) => {
+          console.log("Non-critical: Error loading thunder sound");
         }
       });
       
