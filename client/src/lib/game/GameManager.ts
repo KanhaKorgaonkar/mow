@@ -206,7 +206,7 @@ export class GameManager {
       if (mowedThisFrame > 0) {
         this.totalAreaMowed += mowedThisFrame;
         
-        // Use square feet instead of percentage
+        // Get the square feet directly from the GrassSystem
         const squareFeetMowed = this.grassSystem.getMowedSquareFeet();
         this.callbacks.onMowed(squareFeetMowed);
         
