@@ -12,15 +12,12 @@ export class TerrainGenerator {
   private chunkSize: number = 50; // Size of each terrain chunk
   private chunkResolution: number = 1; // Grid size within chunk
   private visibleDistance: number = 2; // Number of chunks visible in each direction
-  private maxHeight: number = 1.2; // Maximum terrain height
+  private maxHeight: number = 0.8; // Maximum terrain height (reduced for flatter terrain)
   private noise2D: (x: number, y: number) => number;
   private seed: number; // Random seed for terrain generation
   
-  // Water features
-  private waterLevel: number = 0.15; // Height for water level
-  private pondLocations: Map<string, { x: number, z: number, radius: number }[]> = new Map();
-  private waterMaterial: THREE.MeshStandardMaterial;
-  private waterMeshes: Map<string, THREE.Mesh> = new Map();
+  // Ground texture materials
+  private groundTextures: THREE.MeshStandardMaterial[];
   
   // Obstacles for collision detection
   private obstacles: THREE.Object3D[] = [];
@@ -31,14 +28,13 @@ export class TerrainGenerator {
     // Generate random seed for terrain variation between game sessions
     this.seed = Math.random() * 10000;
     
-    // Create water material
-    this.waterMaterial = new THREE.MeshStandardMaterial({
-      color: 0x1E90FF,
-      transparent: true,
-      opacity: 0.8,
-      metalness: 0.9,
-      roughness: 0.1,
-    });
+    // Create different ground texture materials for more variety
+    this.groundTextures = [
+      new THREE.MeshStandardMaterial({ color: 0x4D8A2F }), // Base green
+      new THREE.MeshStandardMaterial({ color: 0x3E6F25 }), // Darker green
+      new THREE.MeshStandardMaterial({ color: 0x5DA83A }), // Lighter green
+      new THREE.MeshStandardMaterial({ color: 0x546B2D })  // Olive green
+    ];
   }
   
   public async initialize() {
@@ -84,11 +80,6 @@ export class TerrainGenerator {
   private async createChunk(chunkX: number, chunkZ: number) {
     const chunkKey = `${chunkX},${chunkZ}`;
     
-    // Generate ponds for this chunk if not already generated
-    if (!this.pondLocations.has(chunkKey)) {
-      this.generatePondsForChunk(chunkX, chunkZ);
-    }
-    
     // Generate height map for this chunk
     const heightMap = this.generateChunkHeightMap(chunkX, chunkZ);
     
@@ -103,12 +94,8 @@ export class TerrainGenerator {
     // Apply height map to geometry
     this.applyHeightMapToGeometry(geometry, heightMap);
     
-    // Create material
-    const material = new THREE.MeshStandardMaterial({
-      color: 0x7CFC00, // Grass green color
-      roughness: 0.8,
-      metalness: 0.1
-    });
+    // Select a random ground texture for this chunk
+    const material = this.groundTextures[Math.floor(Math.random() * this.groundTextures.length)];
     
     // Create mesh
     const mesh = new THREE.Mesh(geometry, material);
@@ -126,69 +113,10 @@ export class TerrainGenerator {
     // Store chunk
     this.chunks.set(chunkKey, { mesh, heightMap });
     
-    // Add water surfaces for ponds
-    this.createWaterForChunk(chunkX, chunkZ);
-    
     return { mesh, heightMap };
   }
   
-  private generatePondsForChunk(chunkX: number, chunkZ: number) {
-    const chunkKey = `${chunkX},${chunkZ}`;
-    
-    // Random number of ponds per chunk (0-2)
-    const pondCount = Math.floor(Math.random() * 2);
-    const ponds: { x: number, z: number, radius: number }[] = [];
-    
-    // Create ponds with random positions and sizes
-    for (let i = 0; i < pondCount; i++) {
-      // Random position within chunk
-      const localX = Math.random() * this.chunkSize;
-      const localZ = Math.random() * this.chunkSize;
-      
-      // Convert to world coordinates
-      const worldX = (chunkX * this.chunkSize) + localX;
-      const worldZ = (chunkZ * this.chunkSize) + localZ;
-      
-      // Random radius between 3-8 meters
-      const radius = 3 + Math.random() * 5;
-      
-      ponds.push({ x: worldX, z: worldZ, radius });
-    }
-    
-    this.pondLocations.set(chunkKey, ponds);
-  }
-  
-  private createWaterForChunk(chunkX: number, chunkZ: number) {
-    const chunkKey = `${chunkX},${chunkZ}`;
-    const ponds = this.pondLocations.get(chunkKey) || [];
-    
-    // Remove any existing water for this chunk
-    if (this.waterMeshes.has(chunkKey)) {
-      const oldWaterMesh = this.waterMeshes.get(chunkKey)!;
-      this.scene.remove(oldWaterMesh);
-      oldWaterMesh.geometry.dispose();
-      this.waterMeshes.delete(chunkKey);
-    }
-    
-    // Create water for each pond
-    ponds.forEach(pond => {
-      // Create circular water surface
-      const waterGeometry = new THREE.CircleGeometry(pond.radius, 32);
-      const waterMesh = new THREE.Mesh(waterGeometry, this.waterMaterial);
-      
-      // Position water surface
-      waterMesh.rotation.x = -Math.PI / 2; // Make it horizontal
-      waterMesh.position.set(
-        pond.x,
-        this.waterLevel + 0.02, // Slightly above ground to avoid z-fighting
-        pond.z
-      );
-      
-      // Add to scene
-      this.scene.add(waterMesh);
-      this.waterMeshes.set(chunkKey, waterMesh);
-    });
-  }
+
   
   private generateChunkHeightMap(chunkX: number, chunkZ: number): number[][] {
     const gridSize = Math.ceil(this.chunkSize / this.chunkResolution) + 1;
@@ -219,7 +147,7 @@ export class TerrainGenerator {
     let amplitude = 0.5;
     let frequency = 1;
     
-    // Add multiple octaves of noise
+    // Add multiple octaves of noise for natural-looking terrain
     for (let octave = 0; octave < 4; octave++) {
       height += this.noise2D(nx * frequency, nz * frequency) * amplitude;
       amplitude *= 0.5;
@@ -231,72 +159,12 @@ export class TerrainGenerator {
     height = Math.pow(height, 1.5); // Flatter terrain with fewer hills
     height *= this.maxHeight; // Scale to max height
     
-    // Check if this point is inside or near a pond
-    const chunkX = Math.floor(x / this.chunkSize);
-    const chunkZ = Math.floor(z / this.chunkSize);
-    const chunkKey = `${chunkX},${chunkZ}`;
+    // Add smaller detail noise for more natural terrain
+    const detailNoise = this.noise2D(nx * 10, nz * 10) * 0.05;
+    height += detailNoise;
     
-    // If we have ponds in this chunk, check if we're in one
-    if (this.pondLocations.has(chunkKey)) {
-      const ponds = this.pondLocations.get(chunkKey)!;
-      
-      for (const pond of ponds) {
-        // Calculate distance from point to pond center
-        const dx = x - pond.x;
-        const dz = z - pond.z;
-        const distanceToPond = Math.sqrt(dx * dx + dz * dz);
-        
-        // If inside pond radius, modify height to be at or below water level
-        if (distanceToPond < pond.radius) {
-          // Create a smooth depression (deeper toward center)
-          const depthFactor = 1 - (distanceToPond / pond.radius);
-          const pondDepth = 0.1 + (0.2 * depthFactor); // Deeper at center
-          
-          // Water level minus depth
-          height = this.waterLevel - pondDepth;
-        }
-        // Create a smooth transition around ponds (gradually sloping terrain)
-        else if (distanceToPond < pond.radius * 1.5) {
-          const transitionFactor = 1 - ((distanceToPond - pond.radius) / (pond.radius * 0.5));
-          const originalHeight = height;
-          // Blend between water level and original terrain height
-          height = originalHeight * (1 - transitionFactor) + this.waterLevel * transitionFactor;
-        }
-      }
-    }
-    
-    // Also check neighboring chunks for ponds near the edges
-    const neighborChunks = [
-      `${chunkX-1},${chunkZ}`, `${chunkX+1},${chunkZ}`,
-      `${chunkX},${chunkZ-1}`, `${chunkX},${chunkZ+1}`,
-      `${chunkX-1},${chunkZ-1}`, `${chunkX+1},${chunkZ-1}`,
-      `${chunkX-1},${chunkZ+1}`, `${chunkX+1},${chunkZ+1}`
-    ];
-    
-    for (const neighborKey of neighborChunks) {
-      if (this.pondLocations.has(neighborKey)) {
-        const ponds = this.pondLocations.get(neighborKey)!;
-        
-        for (const pond of ponds) {
-          const dx = x - pond.x;
-          const dz = z - pond.z;
-          const distanceToPond = Math.sqrt(dx * dx + dz * dz);
-          
-          if (distanceToPond < pond.radius) {
-            const depthFactor = 1 - (distanceToPond / pond.radius);
-            const pondDepth = 0.1 + (0.2 * depthFactor);
-            height = this.waterLevel - pondDepth;
-          }
-          else if (distanceToPond < pond.radius * 1.5) {
-            const transitionFactor = 1 - ((distanceToPond - pond.radius) / (pond.radius * 0.5));
-            const originalHeight = height;
-            height = originalHeight * (1 - transitionFactor) + this.waterLevel * transitionFactor;
-          }
-        }
-      }
-    }
-    
-    return height;
+    // Keep terrain slightly above 0 to prevent clipping
+    return Math.max(0.05, height);
   }
   
   private applyHeightMapToGeometry(geometry: THREE.PlaneGeometry, heightMap: number[][]) {
@@ -379,8 +247,9 @@ export class TerrainGenerator {
     };
   }
   
-  public getWaterLevel(): number {
-    return this.waterLevel;
+  // Ground level functions
+  public getBaseLevel(): number {
+    return 0.05; // Minimum ground height
   }
   
   public addObstacle(obstacle: THREE.Object3D) {
@@ -429,14 +298,6 @@ export class TerrainGenerator {
       }
     });
     this.chunks.clear();
-    
-    // Remove all water features
-    Array.from(this.waterMeshes.entries()).forEach(([key, mesh]) => {
-      this.scene.remove(mesh);
-      mesh.geometry.dispose();
-    });
-    this.waterMeshes.clear();
-    this.pondLocations.clear();
     
     // Clear all obstacles
     for (const obstacle of this.obstacles) {

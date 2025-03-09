@@ -102,10 +102,10 @@ export class GrassSystem {
         continue;
       }
       
-      // Skip positions that are in or near water (below or at water level)
-      // Get the terrain's water level using the getter method
-      const waterLevel = this.terrain.getWaterLevel();
-      if (y <= waterLevel + 0.05) { // Add a small buffer to avoid grass right at the water's edge
+      // Skip positions that are at min ground level (for better performance)
+      // Get the terrain's base level
+      const baseLevel = this.terrain.getBaseLevel();
+      if (y <= baseLevel + 0.02) { // Add a small buffer to avoid grass on the lowest parts
         // Try again with a new position
         i--;
         continue;
