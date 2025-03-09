@@ -181,17 +181,15 @@ export class LawnMower {
   
   // Process movement based on current control flags
   public update(delta: number) {
-    // Process movement based on control flags
+    // Process movement based on control flags - Pure W/A/D control scheme
+    
+    // W = Forward movement only
     if (this.moveForwardActive) {
       // Accelerate forward in the direction we're facing
       const accel = this.direction.clone().multiplyScalar(this.acceleration * delta);
       this.velocity.add(accel);
-    } else if (this.moveBackwardActive) {
-      // Accelerate backward
-      const accel = this.direction.clone().multiplyScalar(-this.acceleration * delta * 0.6); // Slower in reverse
-      this.velocity.add(accel);
     } else {
-      // Apply deceleration when no movement keys are pressed
+      // Apply deceleration when not moving forward
       if (this.velocity.length() > 0.01) {
         const decel = this.velocity.clone().normalize().multiplyScalar(-this.deceleration * delta);
         this.velocity.add(decel);
@@ -203,15 +201,19 @@ export class LawnMower {
       }
     }
     
-    // Turn mower if turning keys are active
+    // A/D = Turn while moving or stationary
+    // Turning rate is higher when stationary for more responsive controls
+    const baseTurnRate = this.rotationSpeed * delta;
+    const turningFactor = this.velocity.length() < 0.1 ? 1.5 : 1.0; // Faster turning when stationary
+    
     if (this.turnLeftActive && !this.turnRightActive) {
-      // Simple turning - directly rotate the direction and mower
-      const rotationAmount = this.rotationSpeed * delta;
+      // Simple left turning - directly rotate the direction and mower
+      const rotationAmount = baseTurnRate * turningFactor;
       this.direction.applyAxisAngle(new THREE.Vector3(0, 1, 0), rotationAmount);
       this.mowerObject.rotation.y += rotationAmount;
     } else if (this.turnRightActive && !this.turnLeftActive) {
-      // Simple turning in the opposite direction
-      const rotationAmount = -this.rotationSpeed * delta;
+      // Simple right turning in the opposite direction
+      const rotationAmount = -baseTurnRate * turningFactor;
       this.direction.applyAxisAngle(new THREE.Vector3(0, 1, 0), rotationAmount);
       this.mowerObject.rotation.y += rotationAmount;
     }
