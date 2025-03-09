@@ -8,22 +8,25 @@ export class LawnMower {
   private mowerBody: THREE.Mesh;
   private mowerBlades: THREE.Mesh;
   private mowerWheels: THREE.Mesh[];
+  private headlights: THREE.SpotLight[] = [];
+  private headlightMeshes: THREE.Mesh[] = [];
   private position: THREE.Vector3 = new THREE.Vector3(0, 0, 0);
   private direction: THREE.Vector3 = new THREE.Vector3(0, 0, -1);
+  private headlightsOn: boolean = false;
   
   // Simplified movement parameters
   private velocity: THREE.Vector3 = new THREE.Vector3(0, 0, 0);
   private rotationSpeed: number = 2.5; // how fast the mower turns
   
-  // Speed parameters
-  private maxSpeedRunning: number = 2.5; // meters per second when mower is running
-  private maxSpeedOff: number = 4.0; // meters per second when mower is off (faster)
-  private acceleration: number = 6.0; // faster acceleration for more responsive controls
-  private deceleration: number = 8.0; // faster slowdown for better control
-  private friction: number = 0.92; // friction to gradually slow down
+  // Speed parameters - increased for faster gameplay
+  private maxSpeedRunning: number = 3.8; // meters per second when mower is running (increased from 2.5)
+  private maxSpeedOff: number = 5.5; // meters per second when mower is off (increased from 4.0)
+  private acceleration: number = 7.5; // faster acceleration for more responsive controls (increased from 6.0)
+  private deceleration: number = 9.0; // faster slowdown for better control (increased from 8.0)
+  private friction: number = 0.94; // slightly less friction for smoother gliding (increased from 0.92)
   
   // Current maximum speed (set based on running state)
-  private currentMaxSpeed: number = 4.0;
+  private currentMaxSpeed: number = 5.5; // Updated to match maxSpeedOff
   
   private isRunning: boolean = false;
   private bladeRotation: number = 0;
@@ -34,6 +37,44 @@ export class LawnMower {
   private moveBackwardActive: boolean = false;
   private turnLeftActive: boolean = false;
   private turnRightActive: boolean = false;
+  
+  // Create headlights for the mower
+  private createHeadlights() {
+    // Create headlight meshes (the visible bulb/housing)
+    const headlightGeometry = new THREE.SphereGeometry(0.05, 8, 8);
+    const headlightMaterial = new THREE.MeshStandardMaterial({ 
+      color: 0xFFFFFF,
+      emissive: 0xFFFFFF,
+      emissiveIntensity: 0.5
+    });
+    
+    // Left headlight
+    const leftHeadlightMesh = new THREE.Mesh(headlightGeometry, headlightMaterial);
+    leftHeadlightMesh.position.set(-0.25, 0.2, -0.4);
+    this.mowerBody.add(leftHeadlightMesh);
+    this.headlightMeshes.push(leftHeadlightMesh);
+    
+    // Right headlight
+    const rightHeadlightMesh = new THREE.Mesh(headlightGeometry, headlightMaterial);
+    rightHeadlightMesh.position.set(0.25, 0.2, -0.4);
+    this.mowerBody.add(rightHeadlightMesh);
+    this.headlightMeshes.push(rightHeadlightMesh);
+    
+    // Create actual light sources (initially off)
+    const leftLight = new THREE.SpotLight(0xFFFFFF, 0, 15, Math.PI / 6, 0.5, 1);
+    leftLight.position.copy(leftHeadlightMesh.position);
+    leftLight.target.position.set(-0.5, 0, -5); // Aim slightly outward
+    this.mowerBody.add(leftLight);
+    this.mowerBody.add(leftLight.target);
+    this.headlights.push(leftLight);
+    
+    const rightLight = new THREE.SpotLight(0xFFFFFF, 0, 15, Math.PI / 6, 0.5, 1);
+    rightLight.position.copy(rightHeadlightMesh.position);
+    rightLight.target.position.set(0.5, 0, -5); // Aim slightly outward
+    this.mowerBody.add(rightLight);
+    this.mowerBody.add(rightLight.target);
+    this.headlights.push(rightLight);
+  }
   
   constructor(scene: THREE.Scene, terrain: TerrainGenerator) {
     this.scene = scene;
@@ -103,6 +144,9 @@ export class LawnMower {
     wheelRR.position.set(0.3, 0.12, 0.35);
     this.mowerBody.add(wheelRR);
     this.mowerWheels.push(wheelRR);
+    
+    // Add headlights
+    this.createHeadlights();
     
     // Set initial position
     this.mowerObject.position.copy(this.position);
@@ -287,6 +331,32 @@ export class LawnMower {
     this.mowerBody.rotation.z += (targetRotationZ - this.mowerBody.rotation.z) * 0.1;
   }
   
+  // Turn headlights on/off
+  public setHeadlights(on: boolean) {
+    this.headlightsOn = on;
+    
+    // Update headlight intensity
+    const intensity = on ? 1.5 : 0;
+    
+    // Update spotlight intensity
+    this.headlights.forEach(light => {
+      light.intensity = intensity;
+    });
+    
+    // Update headlight mesh appearance
+    const emissiveIntensity = on ? 1.0 : 0.2;
+    this.headlightMeshes.forEach(mesh => {
+      if (mesh.material instanceof THREE.MeshStandardMaterial) {
+        mesh.material.emissiveIntensity = emissiveIntensity;
+      }
+    });
+  }
+  
+  // Check if headlights are on
+  public areHeadlightsOn(): boolean {
+    return this.headlightsOn;
+  }
+
   public reset() {
     this.position.set(0, 0, 0);
     this.direction.set(0, 0, -1);
@@ -305,5 +375,8 @@ export class LawnMower {
     this.mowerWheels.forEach(wheel => {
       wheel.rotation.y = 0;
     });
+    
+    // Reset headlights to off
+    this.setHeadlights(false);
   }
 }
