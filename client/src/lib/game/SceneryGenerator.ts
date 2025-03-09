@@ -31,7 +31,7 @@ export class SceneryGenerator {
   private chunkSize: number; // Size of each terrain chunk
   private loadDistance: number = 2; // How many chunks to load in each direction
   private currentPlayerChunk: { x: number, z: number } = { x: 0, z: 0 };
-  private discoveredTypes: Set<string> = new Set(); // Track already discovered scenery types
+  private discoveredTypes: Set<SceneryType> = new Set(); // Track already discovered scenery types
   private seed: number = Date.now(); // Seed for deterministic generation
   
   constructor(
@@ -532,7 +532,9 @@ export class SceneryGenerator {
     
     // Add to scene and scenery objects
     this.scene.add(fenceGroup);
-    this.sceneryObjects.push({
+    
+    // Create the scenery object
+    const fenceObject: SceneryObject = {
       type: 'Fence',
       position: new THREE.Vector3(x, y, z),
       rotation,
@@ -540,7 +542,16 @@ export class SceneryGenerator {
       mesh: fenceGroup,
       discovered: false,
       chunkKey
-    });
+    };
+    
+    // Add to global scenery objects list
+    this.sceneryObjects.push(fenceObject);
+    
+    // Add to specific chunk objects list
+    const chunk = this.sceneryChunks.get(chunkKey);
+    if (chunk) {
+      chunk.objects.push(fenceObject);
+    }
     
     return fenceGroup;
   }
@@ -598,7 +609,9 @@ export class SceneryGenerator {
     
     // Add to scene and scenery objects
     this.scene.add(gardenGroup);
-    this.sceneryObjects.push({
+    
+    // Create the scenery object
+    const gardenObject: SceneryObject = {
       type: 'Garden',
       position: new THREE.Vector3(x, y, z),
       rotation: 0,
@@ -606,7 +619,16 @@ export class SceneryGenerator {
       mesh: gardenGroup,
       discovered: false,
       chunkKey
-    });
+    };
+    
+    // Add to global scenery objects list
+    this.sceneryObjects.push(gardenObject);
+    
+    // Add to specific chunk objects list
+    const chunk = this.sceneryChunks.get(chunkKey);
+    if (chunk) {
+      chunk.objects.push(gardenObject);
+    }
     
     return gardenGroup;
   }
@@ -653,7 +675,9 @@ export class SceneryGenerator {
     
     // Add to scene and scenery objects
     this.scene.add(shedGroup);
-    this.sceneryObjects.push({
+    
+    // Create the scenery object
+    const shedObject: SceneryObject = {
       type: 'Shed',
       position: new THREE.Vector3(x, y, z),
       rotation,
@@ -661,7 +685,16 @@ export class SceneryGenerator {
       mesh: shedGroup,
       discovered: false,
       chunkKey
-    });
+    };
+    
+    // Add to global scenery objects list
+    this.sceneryObjects.push(shedObject);
+    
+    // Add to specific chunk objects list
+    const chunk = this.sceneryChunks.get(chunkKey);
+    if (chunk) {
+      chunk.objects.push(shedObject);
+    }
     
     return shedGroup;
   }
@@ -696,7 +729,9 @@ export class SceneryGenerator {
     
     // Add to scene and scenery objects
     this.scene.add(mailboxGroup);
-    this.sceneryObjects.push({
+    
+    // Create the scenery object
+    const mailboxObject: SceneryObject = {
       type: 'Mailbox',
       position: new THREE.Vector3(x, y, z),
       rotation: 0,
@@ -704,7 +739,16 @@ export class SceneryGenerator {
       mesh: mailboxGroup,
       discovered: false,
       chunkKey
-    });
+    };
+    
+    // Add to global scenery objects list
+    this.sceneryObjects.push(mailboxObject);
+    
+    // Add to specific chunk objects list
+    const chunk = this.sceneryChunks.get(chunkKey);
+    if (chunk) {
+      chunk.objects.push(mailboxObject);
+    }
     
     return mailboxGroup;
   }
@@ -753,7 +797,9 @@ export class SceneryGenerator {
     
     // Add to scene and scenery objects
     this.scene.add(benchGroup);
-    this.sceneryObjects.push({
+    
+    // Create the scenery object
+    const benchObject: SceneryObject = {
       type: 'Bench',
       position: new THREE.Vector3(x, y, z),
       rotation,
@@ -761,7 +807,16 @@ export class SceneryGenerator {
       mesh: benchGroup,
       discovered: false,
       chunkKey
-    });
+    };
+    
+    // Add to global scenery objects list
+    this.sceneryObjects.push(benchObject);
+    
+    // Add to specific chunk objects list
+    const chunk = this.sceneryChunks.get(chunkKey);
+    if (chunk) {
+      chunk.objects.push(benchObject);
+    }
     
     return benchGroup;
   }
