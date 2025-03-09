@@ -21,13 +21,14 @@ export class AudioManager {
     try {
       console.log("AudioManager initializing...");
       
-      // Load the actual lawnmower sound file
+      // Load the lawnmower sound file
       this.sounds.mower = new Howl({
         src: ['/audio/lawnmower.mp3'],
         loop: true,
-        volume: 0.7,
-        rate: 1.0,
+        volume: 0.4, // Lower volume to avoid overpowering
+        rate: 0.9, // Slightly lower pitch for a more natural sound
         preload: true,
+        html5: true, // Try using HTML5 Audio for better compatibility
         onload: () => {
           console.log("Mower sound loaded successfully");
           this.soundsLoaded = true;
@@ -41,34 +42,49 @@ export class AudioManager {
           Howler.volume(0);
           setTimeout(() => {
             Howler.volume(1);
-          }, 10);
+          }, 100);
         }
       });
       
-      // Create other sounds from the same file with different rates
+      // Create other sound effects based on the mower sound
       this.sounds.grassCut = new Howl({
         src: ['/audio/lawnmower.mp3'],
-        volume: 0.3,
-        rate: 1.5,  // Higher pitch
+        volume: 0.2,
+        rate: 1.8,  // Higher pitch for a quick cut sound
+        html5: true,
         sprite: {
-          short: [0, 300] // Create a 300ms sprite for the short clip
+          short: [2000, 300] // Create a 300ms sprite starting at 2 seconds in
         }
       });
       
       this.sounds.discovery = new Howl({
         src: ['/audio/lawnmower.mp3'],
-        volume: 0.5,
-        rate: 0.8,  // Lower pitch
+        volume: 0.3,
+        rate: 0.6,  // Lower pitch for discovery sound
+        html5: true,
         sprite: {
-          medium: [0, 1000] // Create a 1000ms sprite for medium length
+          medium: [0, 800] // Create an 800ms sprite for medium length
         }
       });
       
+      // Simple ambient sounds
       this.sounds.rain = new Howl({
         src: ['/audio/lawnmower.mp3'],
+        volume: 0.1,
+        rate: 0.4,  // Much lower pitch for rain effect
+        loop: true,
+        html5: true
+      });
+      
+      // Thunder sound effect
+      this.sounds.thunder = new Howl({
+        src: ['/audio/lawnmower.mp3'],
         volume: 0.2,
-        rate: 0.5,  // Much lower pitch
-        loop: true
+        rate: 0.3,  // Very low pitch for thunder
+        html5: true,
+        sprite: {
+          rumble: [1000, 2000] // 2 second rumble
+        }
       });
       
       console.log("AudioManager initialized");
@@ -126,7 +142,7 @@ export class AudioManager {
   
   public playThunder() {
     if (this.sounds.thunder) {
-      this.sounds.thunder.play();
+      this.sounds.thunder.play('rumble');
     }
   }
   

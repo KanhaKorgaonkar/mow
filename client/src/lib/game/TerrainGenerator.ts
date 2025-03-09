@@ -12,7 +12,7 @@ export class TerrainGenerator {
   private chunkSize: number = 50; // Size of each terrain chunk
   private chunkResolution: number = 1; // Grid size within chunk
   private visibleDistance: number = 2; // Number of chunks visible in each direction
-  private maxHeight: number = 0.8; // Maximum terrain height (reduced for flatter terrain)
+  private maxHeight: number = 0.5; // Maximum terrain height (further reduced for very flat lawn)
   private noise2D: (x: number, y: number) => number;
   private seed: number; // Random seed for terrain generation
   
@@ -28,12 +28,29 @@ export class TerrainGenerator {
     // Generate random seed for terrain variation between game sessions
     this.seed = Math.random() * 10000;
     
-    // Create different ground texture materials for more variety
+    // Create uniform lawn-like ground texture materials
+    // Using a narrower range of greens for more consistent lawn appearance
     this.groundTextures = [
-      new THREE.MeshStandardMaterial({ color: 0x4D8A2F }), // Base green
-      new THREE.MeshStandardMaterial({ color: 0x3E6F25 }), // Darker green
-      new THREE.MeshStandardMaterial({ color: 0x5DA83A }), // Lighter green
-      new THREE.MeshStandardMaterial({ color: 0x546B2D })  // Olive green
+      new THREE.MeshStandardMaterial({ 
+        color: 0x4D8A2F, // Base lawn green
+        roughness: 0.9,   // More rough for grass-like appearance
+        metalness: 0.1    // Slight reflectivity for morning dew effect
+      }),
+      new THREE.MeshStandardMaterial({ 
+        color: 0x528A34, // Slightly lighter green variant
+        roughness: 0.9,
+        metalness: 0.1
+      }),
+      new THREE.MeshStandardMaterial({ 
+        color: 0x498930, // Slightly more vibrant green
+        roughness: 0.9,
+        metalness: 0.1
+      }),
+      new THREE.MeshStandardMaterial({ 
+        color: 0x4A8A33, // Very similar base green
+        roughness: 0.9,
+        metalness: 0.1
+      })
     ];
   }
   
@@ -139,28 +156,28 @@ export class TerrainGenerator {
   
   private calculateHeightAt(x: number, z: number): number {
     // Add seed to coordinates for variation between game sessions
-    const nx = x * 0.02 + this.seed;
-    const nz = z * 0.02 + this.seed;
+    const nx = x * 0.01 + this.seed; // Reduce frequency for smoother terrain
+    const nz = z * 0.01 + this.seed;
     
-    // Generate base height using noise
+    // Generate base height using simplified noise approach for flatter terrain
     let height = 0;
-    let amplitude = 0.5;
-    let frequency = 1;
+    let amplitude = 0.4; // Reduced amplitude
+    let frequency = 0.5; // Lower frequency for smoother lawn
     
-    // Add multiple octaves of noise for natural-looking terrain
-    for (let octave = 0; octave < 4; octave++) {
+    // Use fewer octaves for smoother, more lawn-like terrain
+    for (let octave = 0; octave < 2; octave++) { // Reduced from 4 to 2 octaves
       height += this.noise2D(nx * frequency, nz * frequency) * amplitude;
-      amplitude *= 0.5;
-      frequency *= 2;
+      amplitude *= 0.4; // Steeper falloff for flatter result
+      frequency *= 1.5; // Gentler frequency increase
     }
     
     // Normalize and scale
     height = (height + 1) * 0.5; // Convert from -1..1 to 0..1
-    height = Math.pow(height, 1.5); // Flatter terrain with fewer hills
+    height = Math.pow(height, 2.0); // More aggressive flattening
     height *= this.maxHeight; // Scale to max height
     
-    // Add smaller detail noise for more natural terrain
-    const detailNoise = this.noise2D(nx * 10, nz * 10) * 0.05;
+    // Add very minimal detail noise for slight texture
+    const detailNoise = this.noise2D(nx * 8, nz * 8) * 0.02; // Reduced detail noise
     height += detailNoise;
     
     // Keep terrain slightly above 0 to prevent clipping
