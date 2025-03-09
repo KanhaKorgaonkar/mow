@@ -6,11 +6,7 @@ interface LoadingScreenProps {
 
 export default function LoadingScreen({ progress }: LoadingScreenProps) {
   const loadingQuotes = [
-    "The grass is always greener where you mow it.",
-    "A well-kept lawn is a joy forever.",
-    "Life is better when you're mowing.",
-    "Cut grass, not corners.",
-    "Keep calm and mow on."
+    "The grass is always greener where you mow it.", "A well-kept lawn is a joy forever.", "Life is better when you're mowing.", "Cut grass, not corners.", "Keep calm and mow on.", "Mow money, mow problems.", "Grass: the gift that keeps on growing.", "Lawn care: where the turf meets the surf.", "Mowing is my therapy; the lawn is my counselor.", "Don't let your lawn be a blade runner—keep it trimmed!", "Mow it, and they will come.", "The best lawns are grown, not thrown.", "Grass doesn’t grow on a busy mower.", "Mow today, glow tomorrow.", "Lawn maintenance: it’s a cut above the rest.", "Trim the grass, ease the stress.", "A mowed lawn is a happy lawn.", "Mow the lawn, seize the dawn.", "Life’s too short for tall grass.", "Mowing: the ultimate blade of glory.", "Green grass, good vibes.", "Keep your lawn in line, one cut at a time.", "Mow it low, watch it grow.", "A lawn is only as good as its last trim.", "Grass is greener with a little shear effort.", "Mowing: where every blade counts.", "Don’t let grass grow under your feet—mow it!", "A neat lawn is a sweet lawn.", "Mowing is the key to lawngevity.","A good mow makes the neighborhood glow.", "Lawn life: trim it and win it.", "Mow your way to a better day.", "The lawn is my canvas, the mower my brush.", "Shear brilliance starts with a mowed lawn.", "Mowing: because grass shouldn’t have the last word.", "A trimmed lawn is a timeless charm.",
   ];
 
   const randomQuote = () => {

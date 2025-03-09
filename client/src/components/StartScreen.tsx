@@ -8,7 +8,7 @@ export default function StartScreen({ onStart }: StartScreenProps) {
   return (
     <div className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-black bg-opacity-50 transition-opacity duration-500">
       <div className="bg-gradient-to-b from-black/70 to-black/90 p-8 rounded-lg max-w-xl w-full mx-4 backdrop-blur-sm">
-        <h1 className="text-4xl md:text-5xl font-bold text-white text-center mb-6">Lawn Mower Simulator</h1>
+        <h1 className="text-4xl md:text-5xl font-bold text-white text-center mb-6">kanhakorgaonkar/mow</h1>
         <div className="space-y-6">
           <p className="text-lg text-gray-200 text-center mb-6">
             Experience the zen of endless lawn mowing in a hyperrealistic environment.
@@ -35,7 +35,7 @@ export default function StartScreen({ onStart }: StartScreenProps) {
           
           <div className="text-center text-xs text-gray-400 mt-6">
             <p>For best experience, use a desktop browser with hardware acceleration enabled.</p>
-            <p className="mt-1">&copy; 2023 Lawn Mower Simulator - A Three.js Experience</p>
+            <p className="mt-1">&copy; 2025 @korgaonkarkanha</p>
           </div>
         </div>
       </div>
