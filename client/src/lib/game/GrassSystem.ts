@@ -101,6 +101,15 @@ export class GrassSystem {
         i--;
         continue;
       }
+      
+      // Skip positions that are in or near water (below or at water level)
+      // Get the terrain's water level using the getter method
+      const waterLevel = this.terrain.getWaterLevel();
+      if (y <= waterLevel + 0.05) { // Add a small buffer to avoid grass right at the water's edge
+        // Try again with a new position
+        i--;
+        continue;
+      }
 
       this.grassData.push({
         position: new THREE.Vector3(x, y, z),

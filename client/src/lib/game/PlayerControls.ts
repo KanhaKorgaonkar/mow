@@ -35,7 +35,12 @@ export class PlayerControls {
   }
   
   private initKeyboardControls() {
-    // Keyboard controls
+    // Keyboard controls - Using WAD control scheme:
+    // W: Move forward
+    // A: Turn left
+    // D: Turn right
+    // S: Move backward (optional)
+    // Also supporting arrow keys as alternatives
     const onKeyDown = (event: KeyboardEvent) => {
       switch (event.code) {
         case 'KeyW':

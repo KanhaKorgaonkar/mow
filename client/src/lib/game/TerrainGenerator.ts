@@ -379,6 +379,10 @@ export class TerrainGenerator {
     };
   }
   
+  public getWaterLevel(): number {
+    return this.waterLevel;
+  }
+  
   public addObstacle(obstacle: THREE.Object3D) {
     this.obstacles.push(obstacle);
   }
