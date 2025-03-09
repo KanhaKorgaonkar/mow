@@ -31,14 +31,24 @@ export class SceneryGenerator {
   }
   
   public async initialize() {
-    // Generate scenery objects
-    await this.generateScenery();
+    // Generate initial scenery objects around the origin
+    await this.generateScenery(new THREE.Vector3(0, 0, 0));
     return true;
   }
   
-  private async generateScenery() {
-    // We no longer need to rely on terrainSize since our terrain is infinite
-    // Instead we'll generate scenery in a large radius around the origin
+  // New method to update scenery based on player position
+  public async updateScenery(playerPosition: THREE.Vector3) {
+    // Check if we need to generate more scenery in this area
+    // This would happen when the player moves to a new region
+    
+    // For now, we'll keep a simple approach where we don't constantly 
+    // generate new scenery as the player moves, but this could be extended
+    // to dynamically generate and remove scenery like we do with terrain chunks
+  }
+  
+  private async generateScenery(centerPosition: THREE.Vector3 = new THREE.Vector3(0, 0, 0)) {
+    // Generate scenery around the provided position (defaults to origin)
+    // This allows us to create scenery anywhere in the infinite terrain
     
     // Clear existing scenery
     this.clearScenery();
