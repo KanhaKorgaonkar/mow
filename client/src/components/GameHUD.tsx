@@ -8,9 +8,6 @@ interface GameHUDProps {
   mowerRunning: boolean;
 }
 
-
-import { useState, useEffect } from 'react';
-
 // Add a component for fallback controls message
 export function FallbackControlsInfo() {
   const [showMessage, setShowMessage] = useState(false);
