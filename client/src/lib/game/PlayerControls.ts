@@ -10,8 +10,15 @@ export class PlayerControls {
   private turnLeft: boolean = false;
   private turnRight: boolean = false;
   private mouseSensitivity: number = 0.002;
-  private cameraOffset: THREE.Vector3 = new THREE.Vector3(0, 1.5, 0.5);
+  private cameraOffsetThirdPerson: THREE.Vector3 = new THREE.Vector3(0, 4, 8); // Higher and further back
+  private cameraOffsetFirstPerson: THREE.Vector3 = new THREE.Vector3(0, 1.5, 0.5);
+  private cameraOffset: THREE.Vector3;
   private euler: THREE.Euler = new THREE.Euler(0, 0, 0, 'YXZ');
+  private thirdPersonView: boolean = false;
+  private orbitAngle: number = 0; // For camera orbiting in third-person
+  private orbitDistance: number = 8; // Distance from mower
+  private orbitHeight: number = 4; // Height above mower
+  private orbitSpeed: number = 0; // Orbital rotation speed
   private touchControls: {
     forward: HTMLElement | null;
     backward: HTMLElement | null;
@@ -24,9 +31,13 @@ export class PlayerControls {
     right: null
   };
   
-  constructor(camera: THREE.PerspectiveCamera, mower: LawnMower) {
+  constructor(camera: THREE.PerspectiveCamera, mower: LawnMower, thirdPersonView: boolean = false) {
     this.camera = camera;
     this.mower = mower;
+    this.thirdPersonView = thirdPersonView;
+    
+    // Set the appropriate camera offset based on view mode
+    this.cameraOffset = thirdPersonView ? this.cameraOffsetThirdPerson : this.cameraOffsetFirstPerson;
     
     // Initialize controls
     this.initKeyboardControls();
@@ -53,6 +64,12 @@ export class PlayerControls {
         case 'KeyD':
         case 'ArrowRight':
           this.turnRight = true;
+          break;
+        // Toggle camera view with 'C' key
+        case 'KeyC':
+          if (event.type === 'keydown' && !event.repeat) {
+            this.toggleCameraView();
+          }
           break;
       }
     };
@@ -82,6 +99,11 @@ export class PlayerControls {
     document.addEventListener('keyup', onKeyUp);
   }
   
+  private toggleCameraView() {
+    this.thirdPersonView = !this.thirdPersonView;
+    this.cameraOffset = this.thirdPersonView ? this.cameraOffsetThirdPerson : this.cameraOffsetFirstPerson;
+  }
+  
   private initMouseControls() {
     // Mouse look controls
     const onMouseMove = (event: MouseEvent) => {
@@ -90,15 +112,26 @@ export class PlayerControls {
       const movementX = event.movementX || 0;
       const movementY = event.movementY || 0;
       
-      // Update rotation
-      this.euler.y -= movementX * this.mouseSensitivity;
-      this.euler.x -= movementY * this.mouseSensitivity;
-      
-      // Clamp vertical rotation
-      this.euler.x = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, this.euler.x));
-      
-      // Apply rotation to camera
-      this.camera.quaternion.setFromEuler(this.euler);
+      if (this.thirdPersonView) {
+        // In third-person, mouse movement orbits the camera around the mower
+        this.orbitAngle -= movementX * this.mouseSensitivity * 0.5;
+        
+        // Update orbit height (limited range)
+        this.orbitHeight = Math.max(2, Math.min(10, 
+          this.orbitHeight - movementY * this.mouseSensitivity * 5
+        ));
+      } else {
+        // First-person view
+        // Update rotation
+        this.euler.y -= movementX * this.mouseSensitivity;
+        this.euler.x -= movementY * this.mouseSensitivity;
+        
+        // Clamp vertical rotation
+        this.euler.x = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, this.euler.x));
+        
+        // Apply rotation to camera
+        this.camera.quaternion.setFromEuler(this.euler);
+      }
     };
     
     document.addEventListener('mousemove', onMouseMove);
@@ -115,14 +148,42 @@ export class PlayerControls {
       // Use Q and E for camera rotation when pointer lock isn't available
       switch (event.code) {
         case 'KeyQ':
-          this.euler.y += 0.05;
-          this.camera.quaternion.setFromEuler(this.euler);
+          if (this.thirdPersonView) {
+            this.orbitAngle += 0.05;
+          } else {
+            this.euler.y += 0.05;
+            this.camera.quaternion.setFromEuler(this.euler);
+          }
           break;
         case 'KeyE':
-          this.euler.y -= 0.05;
-          this.camera.quaternion.setFromEuler(this.euler);
+          if (this.thirdPersonView) {
+            this.orbitAngle -= 0.05;
+          } else {
+            this.euler.y -= 0.05;
+            this.camera.quaternion.setFromEuler(this.euler);
+          }
+          break;
+        case 'KeyR': // R for raising camera
+          if (this.thirdPersonView) {
+            this.orbitHeight = Math.min(10, this.orbitHeight + 0.5);
+          }
+          break;
+        case 'KeyF': // F for lowering camera
+          if (this.thirdPersonView) {
+            this.orbitHeight = Math.max(2, this.orbitHeight - 0.5);
+          }
           break;
       }
+    });
+    
+    // Mouse wheel for zoom in third-person
+    document.addEventListener('wheel', (event) => {
+      if (!this.isLocked || !this.thirdPersonView) return;
+      
+      // Adjust orbit distance with scroll wheel
+      this.orbitDistance = Math.max(3, Math.min(15, 
+        this.orbitDistance + (event.deltaY * 0.01)
+      ));
     });
   }
   
@@ -162,7 +223,7 @@ export class PlayerControls {
     if (this.moveForward) {
       this.mower.moveForward(true, delta);
     } else if (this.moveBackward) {
-      // Implement reverse motion if needed
+      // Implement reverse motion
       this.mower.moveForward(false, delta);
     } else {
       // Decelerate
@@ -176,21 +237,37 @@ export class PlayerControls {
       this.mower.turn('right', delta);
     }
     
-    // Update mower physics
-    this.mower.update(delta);
-    
-    // Update camera position based on mower position and direction
+    // Update camera based on view mode
     const mowerPosition = this.mower.getPosition();
     const mowerDirection = this.mower.getDirection();
     
-    // Position camera slightly above and behind mower
-    const cameraPosition = mowerPosition.clone().add(this.cameraOffset);
-    this.camera.position.copy(cameraPosition);
-    
-    // Look at a point slightly ahead of mower
-    const lookTarget = mowerPosition.clone().add(mowerDirection.clone().multiplyScalar(2));
-    lookTarget.y = cameraPosition.y;
-    // this.camera.lookAt(lookTarget);
+    if (this.thirdPersonView) {
+      // Third-person camera - orbits around the mower
+      
+      // Apply slow automatic orbit if no manual control
+      this.orbitAngle += this.orbitSpeed * delta;
+      
+      // Calculate camera position in orbit
+      const cameraX = mowerPosition.x + Math.sin(this.orbitAngle) * this.orbitDistance;
+      const cameraZ = mowerPosition.z + Math.cos(this.orbitAngle) * this.orbitDistance;
+      const cameraY = mowerPosition.y + this.orbitHeight;
+      
+      // Set camera position
+      this.camera.position.set(cameraX, cameraY, cameraZ);
+      
+      // Look at the mower
+      this.camera.lookAt(
+        mowerPosition.x, 
+        mowerPosition.y + 0.5, // Look slightly above the mower
+        mowerPosition.z
+      );
+    } else {
+      // First-person view - position camera on the mower
+      const cameraPosition = mowerPosition.clone().add(this.cameraOffset);
+      this.camera.position.copy(cameraPosition);
+      
+      // First-person camera orientation is handled by mouse look
+    }
   }
   
   public lock() {
