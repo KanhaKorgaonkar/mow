@@ -11,7 +11,7 @@ export class TerrainGenerator {
   private chunks: Map<string, TerrainChunk> = new Map();
   private chunkSize: number = 50; // Size of each terrain chunk
   private chunkResolution: number = 1; // Grid size within chunk
-  private visibleDistance: number = 2; // Number of chunks visible in each direction
+  private visibleDistance: number = 3; // Number of chunks visible in each direction (increased for more coverage)
   private maxHeight: number = 0.5; // Maximum terrain height (further reduced for very flat lawn)
   private noise2D: (x: number, y: number) => number;
   private seed: number; // Random seed for terrain generation

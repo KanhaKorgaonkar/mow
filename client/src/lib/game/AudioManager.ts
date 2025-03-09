@@ -12,6 +12,8 @@ export class AudioManager {
   
   private isMowerPlaying: boolean = false;
   private soundsLoaded: boolean = false;
+  private masterMuted: boolean = false;
+  private previousVolume: number = 1.0;
 
   constructor() {
     console.log("AudioManager created");
@@ -157,5 +159,37 @@ export class AudioManager {
   public stopAll() {
     Howler.stop();
     this.isMowerPlaying = false;
+  }
+  
+  // Sound toggle functions
+  public toggleMute() {
+    if (this.masterMuted) {
+      // Unmute - restore previous volume
+      Howler.volume(this.previousVolume);
+      this.masterMuted = false;
+    } else {
+      // Mute - save current volume and set to 0
+      this.previousVolume = Howler.volume();
+      Howler.volume(0);
+      this.masterMuted = true;
+    }
+    return this.masterMuted;
+  }
+  
+  public isMuted(): boolean {
+    return this.masterMuted;
+  }
+  
+  public setVolume(volume: number) {
+    // Ensure volume is between 0 and 1
+    const safeVolume = Math.max(0, Math.min(1, volume));
+    Howler.volume(safeVolume);
+    this.previousVolume = safeVolume;
+    this.masterMuted = (safeVolume === 0);
+    return safeVolume;
+  }
+  
+  public getVolume(): number {
+    return Howler.volume();
   }
 }
