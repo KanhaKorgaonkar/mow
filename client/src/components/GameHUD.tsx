@@ -27,8 +27,16 @@ export function FallbackControlsInfo() {
   
   return (
     <div className="absolute top-4 right-4 bg-black/70 text-white p-3 rounded-md max-w-xs text-sm">
-      <p className="font-bold mb-1">Fallback Controls Active:</p>
-      <p>Use Q and E keys to look left and right</p>
+      <p className="font-bold mb-1">Controls Guide:</p>
+      <ul className="list-disc pl-4 space-y-1">
+        <li><span className="font-bold">W</span> - Move forward</li>
+        <li><span className="font-bold">A</span> - Turn left</li>
+        <li><span className="font-bold">D</span> - Turn right</li>
+        <li><span className="font-bold">S</span> - Move backward</li>
+        <li><span className="font-bold">Q/E</span> - Look left/right</li>
+        <li><span className="font-bold">Space</span> - Toggle mower on/off</li>
+      </ul>
+      <p className="mt-2 text-xs italic">Mower moves faster when turned off!</p>
       <button 
         onClick={() => setShowMessage(false)}
         className="text-xs text-gray-400 mt-2 hover:text-white"
@@ -41,6 +49,7 @@ export function FallbackControlsInfo() {
 
 export default function GameHUD({ onPause, weather, timeOfDay, mowedArea, mowerRunning }: GameHUDProps) {
   const [showMobileControls, setShowMobileControls] = useState(false);
+  const [showControlsHelp, setShowControlsHelp] = useState(false);
 
   // Detect touch devices for mobile controls
   useEffect(() => {
@@ -129,15 +138,62 @@ export default function GameHUD({ onPause, weather, timeOfDay, mowedArea, mowerR
         )}
       </div>
       
-      {/* Pause button */}
-      <div className="absolute top-4 left-4">
+      {/* Control buttons - pause and help */}
+      <div className="absolute top-4 left-4 flex space-x-2">
         <button 
           className="bg-black bg-opacity-30 backdrop-blur-sm rounded-lg p-2 pointer-events-auto"
           onClick={onPause}
         >
           <i className="fas fa-pause text-white"></i>
         </button>
+        <button 
+          className="bg-black bg-opacity-30 backdrop-blur-sm rounded-lg p-2 pointer-events-auto"
+          onClick={() => setShowControlsHelp(!showControlsHelp)}
+        >
+          <i className="fas fa-question text-white"></i>
+        </button>
       </div>
+      
+      {/* Controls help dialog */}
+      {showControlsHelp && (
+        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-black/80 text-white p-4 rounded-md max-w-sm pointer-events-auto">
+          <div className="flex justify-between items-center mb-2">
+            <h3 className="font-bold text-lg">Game Controls</h3>
+            <button 
+              onClick={() => setShowControlsHelp(false)}
+              className="text-white/80 hover:text-white"
+            >
+              <i className="fas fa-times"></i>
+            </button>
+          </div>
+          <div className="grid grid-cols-2 gap-y-2 gap-x-4">
+            <div className="font-bold">Movement:</div>
+            <div>W, A, D keys or arrow keys</div>
+            
+            <div className="font-bold">Forward:</div>
+            <div>W or Up Arrow</div>
+            
+            <div className="font-bold">Turn Left:</div>
+            <div>A or Left Arrow</div>
+            
+            <div className="font-bold">Turn Right:</div>
+            <div>D or Right Arrow</div>
+            
+            <div className="font-bold">Reverse:</div>
+            <div>S or Down Arrow</div>
+            
+            <div className="font-bold">Toggle Mower:</div>
+            <div>Space Bar</div>
+            
+            <div className="font-bold">Look Around:</div>
+            <div>Mouse or Q/E keys</div>
+          </div>
+          <div className="mt-4 text-sm bg-gray-800 p-2 rounded">
+            <p className="font-bold text-green-400">Tip:</p>
+            <p>Mower moves faster when turned off, but can only cut grass when running!</p>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
