@@ -37,9 +37,8 @@ export class SceneryGenerator {
   }
   
   private async generateScenery() {
-    const terrainSize = this.terrain.getSize();
-    const halfWidth = terrainSize.width / 2;
-    const halfDepth = terrainSize.depth / 2;
+    // We no longer need to rely on terrainSize since our terrain is infinite
+    // Instead we'll generate scenery in a large radius around the origin
     
     // Clear existing scenery
     this.clearScenery();

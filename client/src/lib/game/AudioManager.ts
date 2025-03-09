@@ -19,7 +19,7 @@ export class AudioManager {
   public async initialize() {
     console.log("AudioManager initialized");
     
-    // Load mower sound
+    // Load mower sound from public/sounds directory
     this.sounds.mower = new Howl({
       src: ['/sounds/lawnmower.mp3'],
       loop: true,
