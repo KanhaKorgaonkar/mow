@@ -1,55 +1,108 @@
-// Simplified AudioManager for debugging
+import { Howl, Howler } from 'howler';
+
 export class AudioManager {
+  private sounds: {
+    mower?: Howl;
+    grassCut?: Howl;
+    discovery?: Howl;
+    rain?: Howl;
+    thunder?: Howl;
+    ambient?: Howl;
+  } = {};
+  
+  private isMowerPlaying: boolean = false;
+
   constructor() {
     console.log("AudioManager created");
   }
   
   public async initialize() {
     console.log("AudioManager initialized");
+    
+    // Load mower sound
+    this.sounds.mower = new Howl({
+      src: ['/sounds/lawnmower.mp3'],
+      loop: true,
+      volume: 0.7,
+      rate: 1.0,
+      preload: true,
+    });
+    
+    // Load other sounds as minimal placeholders for now
+    this.sounds.grassCut = new Howl({
+      src: ['data:audio/wav;base64,UklGRigAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQQAAAAAAA=='],
+      volume: 0.3,
+    });
+    
+    this.sounds.discovery = new Howl({
+      src: ['data:audio/wav;base64,UklGRigAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQQAAAAAAA=='],
+      volume: 0.5,
+    });
+    
     return true;
   }
   
   public playAmbient() {
-    console.log("Playing ambient sound");
+    if (this.sounds.ambient) {
+      this.sounds.ambient.play();
+    }
   }
   
   public playMower() {
-    console.log("Playing mower sound");
+    if (this.sounds.mower && !this.isMowerPlaying) {
+      this.sounds.mower.play();
+      this.isMowerPlaying = true;
+    }
   }
   
   public pauseMower() {
-    console.log("Pausing mower sound");
+    if (this.sounds.mower && this.isMowerPlaying) {
+      this.sounds.mower.pause();
+      this.isMowerPlaying = false;
+    }
   }
   
   public playGrassCut() {
-    console.log("Playing grass cut sound");
+    if (this.sounds.grassCut) {
+      // Play a fresh instance to allow overlapping sounds
+      this.sounds.grassCut.play();
+    }
   }
   
   public playDiscovery() {
-    console.log("Playing discovery sound");
+    if (this.sounds.discovery) {
+      this.sounds.discovery.play();
+    }
   }
   
   public playRain() {
-    console.log("Playing rain sound");
+    if (this.sounds.rain) {
+      this.sounds.rain.play();
+    }
   }
   
   public pauseRain() {
-    console.log("Pausing rain sound");
+    if (this.sounds.rain) {
+      this.sounds.rain.pause();
+    }
   }
   
   public playThunder() {
-    console.log("Playing thunder sound");
+    if (this.sounds.thunder) {
+      this.sounds.thunder.play();
+    }
   }
   
   public pauseAll() {
-    console.log("Pausing all sounds");
+    Howler.volume(0);
   }
   
   public resumeAll() {
-    console.log("Resuming all sounds");
+    Howler.volume(1);
   }
   
   public stopAll() {
-    console.log("Stopping all sounds");
+    Howler.stop();
+    this.isMowerPlaying = false;
   }
 }
