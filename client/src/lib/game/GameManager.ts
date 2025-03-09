@@ -39,9 +39,6 @@ export class GameManager {
   private gameStarted: boolean = false;
   private mowerRunning: boolean = false;
   private totalAreaMowed: number = 0;
-  private discoveredScenery: Set<string> = new Set(); // Track discovered scenery to prevent duplicates
-  private backgroundAudio: boolean = true;
-  private chunkSize: number = 100; // Size of each terrain chunk
   
   constructor(options: GameManagerOptions) {
     this.callbacks = {
@@ -54,18 +51,9 @@ export class GameManager {
     
     // Initialize Three.js scene
     this.scene = new THREE.Scene();
-    this.scene.background = new THREE.Color(0x87CEEB); // Sky blue background
-    
-    // Configure camera with wider FOV for better visibility
     this.camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-    
-    // Setup renderer with better quality settings
-    this.renderer = new THREE.WebGLRenderer({ 
-      antialias: true,
-      powerPreference: 'high-performance' 
-    });
+    this.renderer = new THREE.WebGLRenderer({ antialias: true });
     this.renderer.setSize(window.innerWidth, window.innerHeight);
-    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2)); // Limit for performance
     this.renderer.shadowMap.enabled = true;
     this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
@@ -77,34 +65,23 @@ export class GameManager {
     // Initialize clock for animation
     this.clock = new THREE.Clock();
     
-    // Initialize systems with larger terrain
-    this.terrain = new TerrainGenerator(this.scene, this.chunkSize, this.chunkSize);
+    // Initialize systems
+    this.terrain = new TerrainGenerator(this.scene, 100, 100);
     this.grassSystem = new GrassSystem(this.scene, this.terrain);
-    
-    // Initialize weather system with daylight start
-    this.weatherSystem = new WeatherSystem(
-      this.scene, 
-      (weather) => this.callbacks.onWeatherChange(weather),
-      (time) => this.callbacks.onTimeChange(time),
-      true // Start with daylight
-    );
-    
+    this.weatherSystem = new WeatherSystem(this.scene, (weather) => {
+      this.callbacks.onWeatherChange(weather);
+    }, (time) => {
+      this.callbacks.onTimeChange(time);
+    });
     this.lawnMower = new LawnMower(this.scene, this.terrain);
-    
-    // Configure third-person controls instead of first-person
-    this.playerControls = new PlayerControls(this.camera, this.lawnMower, true); // true for third-person
-    
-    this.sceneryGenerator = new SceneryGenerator(
-      this.scene, 
-      this.terrain, 
-      (scenery) => this.handleSceneryDiscovery(scenery)
-    );
-    
+    this.playerControls = new PlayerControls(this.camera, this.lawnMower);
+    this.sceneryGenerator = new SceneryGenerator(this.scene, this.terrain, (scenery) => {
+      this.callbacks.onSceneryDiscovered(scenery);
+    });
     this.audioManager = new AudioManager();
     
-    // Set up camera in third-person position
-    this.camera.position.set(0, 3, 8); // Position camera behind and above mower
-    this.camera.lookAt(0, 0, 0);
+    // Set up camera
+    this.camera.position.set(0, 1.7, 5); // Typical standing height
     this.scene.add(this.lawnMower.getObject());
     
     // Handle window resize
@@ -118,34 +95,16 @@ export class GameManager {
   }
   
   private preloadAssets() {
-    // Simulate asset loading with progress steps
-    let loadingSteps = 0;
-    const totalSteps = 6; // Total number of initialization steps
-    
-    const updateProgress = () => {
-      loadingSteps++;
-      const progress = 0.1 + (loadingSteps / totalSteps) * 0.9; // Start at 10%, go to 100%
-      this.callbacks.onProgress(progress);
-    };
-    
-    // Initialize each system with progress updates
-    this.terrain.initialize().then(() => {
-      updateProgress();
-      return this.grassSystem.initialize();
-    }).then(() => {
-      updateProgress();
-      return this.weatherSystem.initialize();
-    }).then(() => {
-      updateProgress();
-      return this.lawnMower.initialize();
-    }).then(() => {
-      updateProgress();
-      return this.sceneryGenerator.initialize();
-    }).then(() => {
-      updateProgress();
-      return this.audioManager.initialize();
-    }).then(() => {
-      updateProgress();
+    // Simulate asset loading with progress
+    Promise.all([
+      this.terrain.initialize(),
+      this.grassSystem.initialize(),
+      this.weatherSystem.initialize(),
+      this.lawnMower.initialize(),
+      this.sceneryGenerator.initialize(),
+      this.audioManager.initialize()
+    ]).then(() => {
+      this.callbacks.onProgress(1);
     }).catch(error => {
       console.error("Error initializing game:", error);
     });
@@ -160,26 +119,18 @@ export class GameManager {
     this.renderer.setSize(width, height);
   }
   
-  private handleSceneryDiscovery(scenery: string) {
-    // Only notify of discoveries once
-    if (!this.discoveredScenery.has(scenery)) {
-      this.discoveredScenery.add(scenery);
-      this.callbacks.onSceneryDiscovered(scenery);
-      this.audioManager.playDiscovery();
-    }
-  }
-  
   public startGame() {
     this.gameStarted = true;
     this.isRunning = true;
-    this.mowerRunning = false; // Start with mower off
+    this.mowerRunning = true;
     
-    // Start background audio
-    if (this.backgroundAudio) {
-      this.audioManager.playAmbient();
+    // Start audio
+    this.audioManager.playAmbient();
+    if (this.mowerRunning) {
+      this.audioManager.playMower();
     }
     
-    // Lock pointer for control
+    // Lock pointer for first-person control
     this.playerControls.lock();
   }
   
@@ -200,7 +151,6 @@ export class GameManager {
     this.gameStarted = false;
     this.mowerRunning = false;
     this.totalAreaMowed = 0;
-    this.discoveredScenery.clear();
     
     // Reset all systems
     this.terrain.reset();
@@ -210,9 +160,9 @@ export class GameManager {
     this.sceneryGenerator.reset();
     this.audioManager.stopAll();
     
-    // Reset camera position for third-person view
-    this.camera.position.set(0, 3, 8);
-    this.camera.lookAt(0, 0, 0);
+    // Reset camera position
+    this.camera.position.set(0, 1.7, 5);
+    this.camera.lookAt(0, 1.7, 0);
     
     this.callbacks.onMowed(0);
     this.playerControls.unlock();
@@ -235,21 +185,13 @@ export class GameManager {
     
     const delta = this.clock.getDelta();
     
-    // Update player position and controls
+    // Update all systems
     this.playerControls.update(delta);
-    
-    // Get current player position
-    const playerPosition = this.lawnMower.getPosition();
-    
-    // Update terrain chunks based on player position
-    this.terrain.updateVisibleChunks(playerPosition.x, playerPosition.z);
-    
-    // Update weather with slower transitions
     this.weatherSystem.update(delta);
     
     if (this.mowerRunning) {
       // Check for grass cutting
-      const mowedThisFrame = this.grassSystem.mow(playerPosition, this.lawnMower.getDirection());
+      const mowedThisFrame = this.grassSystem.mow(this.lawnMower.getPosition(), this.lawnMower.getDirection());
       
       if (mowedThisFrame > 0) {
         this.totalAreaMowed += mowedThisFrame;
@@ -261,10 +203,7 @@ export class GameManager {
     }
     
     // Check for scenery discovery
-    this.sceneryGenerator.checkForDiscovery(playerPosition);
-    
-    // Update lawnmower physics (including collision detection)
-    this.lawnMower.update(delta);
+    this.sceneryGenerator.checkForDiscovery(this.lawnMower.getPosition());
     
     // Render the scene
     this.renderer.render(this.scene, this.camera);

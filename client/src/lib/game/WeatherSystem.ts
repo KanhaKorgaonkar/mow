@@ -11,13 +11,12 @@ export class WeatherSystem {
   private currentWeather: WeatherType = 'Sunny';
   private nextWeather: WeatherType = 'Sunny';
   private weatherTransitionTime: number = 0;
-  private weatherTransitionDuration: number = 30; // seconds - longer transitions
-  private weatherDuration: number = 300; // seconds between weather changes - less frequent changes
+  private weatherTransitionDuration: number = 10; // seconds
+  private weatherDuration: number = 120; // seconds between weather changes
   private weatherTimer: number = 0;
   private currentTime: number = 0; // seconds since day start
-  private dayDuration: number = 1200; // seconds for one day/night cycle - slower day/night cycle
-  private timeString: string = '12:00';
-  private startWithDaylight: boolean;
+  private dayDuration: number = 600; // seconds for one day/night cycle
+  private timeString: string = '10:30';
   
   private onWeatherChange: (weather: string) => void;
   private onTimeChange: (time: string) => void;
@@ -25,13 +24,11 @@ export class WeatherSystem {
   constructor(
     scene: THREE.Scene,
     onWeatherChange: (weather: string) => void,
-    onTimeChange: (time: string) => void,
-    startWithDaylight: boolean = false
+    onTimeChange: (time: string) => void
   ) {
     this.scene = scene;
     this.onWeatherChange = onWeatherChange;
     this.onTimeChange = onTimeChange;
-    this.startWithDaylight = startWithDaylight;
     
     // Create directional light (sun)
     this.directionalLight = new THREE.DirectionalLight(0xFFFFFF, 1);
@@ -39,20 +36,20 @@ export class WeatherSystem {
     this.directionalLight.castShadow = true;
     this.directionalLight.shadow.mapSize.width = 2048;
     this.directionalLight.shadow.mapSize.height = 2048;
-    this.directionalLight.shadow.camera.left = -50; // Expanded shadow area
-    this.directionalLight.shadow.camera.right = 50;
-    this.directionalLight.shadow.camera.top = 50;
-    this.directionalLight.shadow.camera.bottom = -50;
+    this.directionalLight.shadow.camera.left = -15;
+    this.directionalLight.shadow.camera.right = 15;
+    this.directionalLight.shadow.camera.top = 15;
+    this.directionalLight.shadow.camera.bottom = -15;
     this.directionalLight.shadow.camera.near = 0.5;
-    this.directionalLight.shadow.camera.far = 100; // Increased shadow distance
+    this.directionalLight.shadow.camera.far = 30;
     this.scene.add(this.directionalLight);
     
     // Create ambient light
     this.ambientLight = new THREE.AmbientLight(0x404040, 0.5);
     this.scene.add(this.ambientLight);
     
-    // Set initial time - noon for better visibility
-    this.setDayTime(this.startWithDaylight ? 12.0 : 10.5);
+    // Set initial time
+    this.setDayTime(10.5); // 10:30 AM
   }
   
   public async initialize() {
@@ -62,38 +59,31 @@ export class WeatherSystem {
     // Create rain system (initially not visible)
     this.createRainSystem();
     
-    // If starting with daylight, set the current time to midday
-    if (this.startWithDaylight) {
-      this.currentTime = this.dayDuration / 2; // Start at midday
-      this.setDayTime(12.0); // Noon
-    }
-    
     return true;
   }
   
   private createRainSystem() {
-    const rainCount = 8000; // More raindrops
+    const rainCount = 5000;
     const rainGeometry = new THREE.BufferGeometry();
     const rainPositions = new Float32Array(rainCount * 3);
     
-    // Create rain drops at random positions in a larger area
+    // Create rain drops at random positions
     for (let i = 0; i < rainCount; i++) {
       const i3 = i * 3;
-      // Random position in a larger area, varied height
-      rainPositions[i3] = (Math.random() - 0.5) * 100; // x
-      rainPositions[i3 + 1] = 10 + Math.random() * 15; // y (height)
-      rainPositions[i3 + 2] = (Math.random() - 0.5) * 100; // z
+      // Random position in a 50x50 area, height from 10 to 20
+      rainPositions[i3] = (Math.random() - 0.5) * 50;
+      rainPositions[i3 + 1] = 10 + Math.random() * 10;
+      rainPositions[i3 + 2] = (Math.random() - 0.5) * 50;
     }
     
     rainGeometry.setAttribute('position', new THREE.BufferAttribute(rainPositions, 3));
     
-    // Create rain material with better appearance
+    // Create rain material
     const rainMaterial = new THREE.PointsMaterial({
-      color: 0xCCCCDD, // Slight blue tint
-      size: 0.15,
+      color: 0xAAAAAA,
+      size: 0.1,
       transparent: true,
-      opacity: 0.7,
-      sizeAttenuation: true // Proper perspective scaling
+      opacity: 0.6
     });
     
     // Create rain system
@@ -110,29 +100,29 @@ export class WeatherSystem {
     switch (weather) {
       case 'Sunny':
         if (this.rainParticles) this.rainParticles.visible = false;
-        this.scene.background = new THREE.Color(0x87CEEB); // Bright blue
+        this.scene.background = new THREE.Color(0x87CEEB);
         this.directionalLight.intensity = 1;
         this.ambientLight.intensity = 0.5;
         break;
         
       case 'Cloudy':
         if (this.rainParticles) this.rainParticles.visible = false;
-        this.scene.background = new THREE.Color(0xA8B0BC); // Light gray with blue tint
+        this.scene.background = new THREE.Color(0x9CA3AF);
         this.directionalLight.intensity = 0.7;
-        this.ambientLight.intensity = 0.6;
+        this.ambientLight.intensity = 0.7;
         break;
         
       case 'Rainy':
         if (this.rainParticles) this.rainParticles.visible = true;
-        this.scene.background = new THREE.Color(0x78838F); // Darker gray-blue
-        this.directionalLight.intensity = 0.5;
+        this.scene.background = new THREE.Color(0x6B7280);
+        this.directionalLight.intensity = 0.4;
         this.ambientLight.intensity = 0.6;
         break;
         
       case 'Stormy':
         if (this.rainParticles) this.rainParticles.visible = true;
-        this.scene.background = new THREE.Color(0x4B5563); // Dark gray
-        this.directionalLight.intensity = 0.3;
+        this.scene.background = new THREE.Color(0x4B5563);
+        this.directionalLight.intensity = 0.2;
         this.ambientLight.intensity = 0.4;
         break;
     }
@@ -144,11 +134,6 @@ export class WeatherSystem {
     const positions = this.rainParticles.geometry.attributes.position.array as Float32Array;
     const rainSpeed = this.currentWeather === 'Stormy' ? 15 : 10;
     
-    // Get player position (assumed to be at 0,0,0 for this function)
-    const playerX = 0;
-    const playerZ = 0;
-    const rainArea = 100; // Width/length of rain area
-    
     // Update each raindrop position
     for (let i = 0; i < positions.length; i += 3) {
       // Move down with rain speed
@@ -156,10 +141,9 @@ export class WeatherSystem {
       
       // If below ground, reset to top
       if (positions[i + 1] < 0) {
-        // Reset around player position
-        positions[i] = playerX + (Math.random() - 0.5) * rainArea;
-        positions[i + 1] = 15 + Math.random() * 10; // Reset height
-        positions[i + 2] = playerZ + (Math.random() - 0.5) * rainArea;
+        positions[i] = (Math.random() - 0.5) * 50; // Random x
+        positions[i + 1] = 10 + Math.random() * 10; // Reset height
+        positions[i + 2] = (Math.random() - 0.5) * 50; // Random z
       }
     }
     
@@ -183,23 +167,14 @@ export class WeatherSystem {
     
     if (nighttime) {
       // Night
-      this.directionalLight.intensity = 0.15; // Slightly brighter night
+      this.directionalLight.intensity = 0.1;
       this.ambientLight.intensity = 0.3;
-      
-      // Darker blue night sky
-      this.scene.background = new THREE.Color(0x12223F);
+      this.scene.background = new THREE.Color(0x1E293B);
     } else if (dawnDusk) {
-      // Dawn/Dusk with orange/pink sky
-      this.directionalLight.intensity = 0.6;
-      this.ambientLight.intensity = 0.5;
-      
-      if (hours < 12) {
-        // Dawn - more orange
-        this.scene.background = new THREE.Color(0xFFA07A);
-      } else {
-        // Dusk - more pink/purple
-        this.scene.background = new THREE.Color(0xDDA0DD);
-      }
+      // Dawn/Dusk
+      this.directionalLight.intensity = 0.5;
+      this.ambientLight.intensity = 0.6;
+      this.scene.background = new THREE.Color(0xFB923C);
     } else {
       // Day - adjust based on weather
       this.setWeather(this.currentWeather);
@@ -208,18 +183,13 @@ export class WeatherSystem {
     // Format time string
     const hourInt = Math.floor(hours);
     const minute = Math.floor((hours - hourInt) * 60);
-    const ampm = hourInt >= 12 ? 'PM' : 'AM';
-    const hour12 = hourInt % 12 || 12; // Convert to 12-hour format
-    this.timeString = `${hour12}:${minute < 10 ? '0' : ''}${minute} ${ampm}`;
+    this.timeString = `${hourInt}:${minute < 10 ? '0' : ''}${minute}`;
     this.onTimeChange(this.timeString);
   }
   
   public update(delta: number) {
-    // Use a slower delta for slower transitions
-    const slowedDelta = delta * 0.7; // 70% normal speed
-    
     // Update day/night cycle
-    this.currentTime += slowedDelta;
+    this.currentTime += delta;
     if (this.currentTime > this.dayDuration) {
       this.currentTime = 0;
     }
@@ -228,13 +198,13 @@ export class WeatherSystem {
     const hours = (this.currentTime / this.dayDuration) * 24;
     this.setDayTime(hours);
     
-    // Update weather with slowed transitions
-    this.weatherTimer += slowedDelta;
+    // Update weather
+    this.weatherTimer += delta;
     
     // Check if it's time for weather transition
     if (this.weatherTimer > this.weatherDuration && this.weatherTransitionTime === 0) {
-      // Select new random weather, with sunny being more common
-      const weathers: WeatherType[] = ['Sunny', 'Sunny', 'Cloudy', 'Rainy', 'Stormy'];
+      // Select new random weather
+      const weathers: WeatherType[] = ['Sunny', 'Cloudy', 'Rainy', 'Stormy'];
       let newWeather: WeatherType;
       
       // Avoid same weather twice in a row
@@ -248,27 +218,7 @@ export class WeatherSystem {
     
     // Handle weather transition
     if (this.weatherTransitionTime > 0) {
-      this.weatherTransitionTime += slowedDelta;
-      
-      // Gradual transition - blend colors and lighting based on transition progress
-      if (this.weatherTransitionTime < this.weatherTransitionDuration) {
-        const progress = this.weatherTransitionTime / this.weatherTransitionDuration;
-        
-        // Gradually adjust rain visibility for smoother transitions
-        if (this.rainParticles) {
-          if ((this.currentWeather === 'Sunny' || this.currentWeather === 'Cloudy') && 
-              (this.nextWeather === 'Rainy' || this.nextWeather === 'Stormy')) {
-            // Fade in rain
-            this.rainParticles.visible = true;
-            (this.rainParticles.material as THREE.PointsMaterial).opacity = 0.7 * progress;
-          } else if ((this.currentWeather === 'Rainy' || this.currentWeather === 'Stormy') && 
-                    (this.nextWeather === 'Sunny' || this.nextWeather === 'Cloudy')) {
-            // Fade out rain
-            (this.rainParticles.material as THREE.PointsMaterial).opacity = 0.7 * (1 - progress);
-            if (progress > 0.9) this.rainParticles.visible = false;
-          }
-        }
-      }
+      this.weatherTransitionTime += delta;
       
       // Transition complete
       if (this.weatherTransitionTime >= this.weatherTransitionDuration) {
@@ -283,10 +233,10 @@ export class WeatherSystem {
   }
   
   public reset() {
-    this.currentTime = this.startWithDaylight ? this.dayDuration / 2 : 0;
+    this.currentTime = 0;
     this.weatherTimer = 0;
     this.weatherTransitionTime = 0;
     this.setWeather('Sunny');
-    this.setDayTime(this.startWithDaylight ? 12.0 : 10.5);
+    this.setDayTime(10.5); // 10:30 AM
   }
 }
