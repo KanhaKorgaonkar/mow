@@ -72,11 +72,10 @@ export class GrassSystem {
 
     this.grassData = [];
 
-    // Create grass blades with random positions near the player's starting point
-    // We'll use a higher density but smaller initial area
-    // More grass will be generated/placed as player moves
-    const initialRadius = 60; // Much higher initial radius to see more grass
-    const densityFactor = 0.8; // Higher density
+    // Create grass blades with random positions across a larger area for complete coverage
+    // Using maximum possible coverage area based on visible distance
+    const initialRadius = 150; // Much larger radius for comprehensive coverage
+    const densityFactor = 0.95; // Even higher density for lusher appearance
 
     for (let i = 0; i < this.grassCount; i++) {
       // Use polar coordinates for better distribution

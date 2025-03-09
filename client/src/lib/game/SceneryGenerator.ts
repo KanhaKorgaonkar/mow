@@ -171,11 +171,11 @@ export class SceneryGenerator {
       await this.createMailbox(mailboxX, mailboxY, mailboxZ);
     }
     
-    // Generate trees scattered throughout the terrain
-    const treeCount = 30;
+    // Generate a greater number of trees scattered throughout the terrain
+    const treeCount = 60; // Doubled for more trees and interesting scenery
     for (let i = 0; i < treeCount; i++) {
-      // Wide distribution of trees
-      const treeDistance = 10 + Math.random() * 100;
+      // Even wider distribution of trees, with some clustering
+      const treeDistance = 10 + Math.random() * 150; // Extended range
       const treeAngle = Math.random() * Math.PI * 2;
       
       const x = Math.cos(treeAngle) * treeDistance;
@@ -188,10 +188,10 @@ export class SceneryGenerator {
       this.terrain.addObstacle(tree);
     }
     
-    // Add some benches in random locations
-    const benchCount = 3;
+    // Add more benches scattered throughout the landscape
+    const benchCount = 8; // Increased for more interactive objects
     for (let i = 0; i < benchCount; i++) {
-      const benchDistance = 15 + Math.random() * 40;
+      const benchDistance = 15 + Math.random() * 70; // Wider distribution
       const benchAngle = Math.random() * Math.PI * 2;
       
       const x = Math.cos(benchAngle) * benchDistance;
