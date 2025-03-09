@@ -44,64 +44,153 @@ export class SceneryGenerator {
     // Clear existing scenery
     this.clearScenery();
     
-    // Generate houses
-    const houseCount = 3;
-    for (let i = 0; i < houseCount; i++) {
-      // Place houses at random positions, but not too close to center
-      const distance = 20 + Math.random() * 20;
-      const angle = Math.random() * Math.PI * 2;
-      
-      const x = Math.cos(angle) * distance;
-      const z = Math.sin(angle) * distance;
-      const y = this.terrain.getHeightAt(x, z);
-      
-      await this.createHouse(x, y, z, Math.random() * Math.PI * 2);
-    }
+    // Generate randomized properties with houses and fences
+    // We'll create 4-6 property areas
+    const propertyCount = 4 + Math.floor(Math.random() * 3);
     
-    // Generate trees
-    const treeCount = 15;
-    for (let i = 0; i < treeCount; i++) {
-      const x = (Math.random() * terrainSize.width * 0.8) - (halfWidth * 0.8);
-      const z = (Math.random() * terrainSize.depth * 0.8) - (halfDepth * 0.8);
-      const y = this.terrain.getHeightAt(x, z);
+    for (let p = 0; p < propertyCount; p++) {
+      // Generate a house location
+      // Place houses distributed around the map in different sectors
+      const sectorAngle = (p / propertyCount) * Math.PI * 2;
+      const angleVariation = (Math.random() - 0.5) * (Math.PI / propertyCount);
+      const angle = sectorAngle + angleVariation;
       
-      await this.createTree(x, y, z);
-    }
-    
-    // Generate fences
-    const fenceSegments = 40;
-    let fenceX = -15;
-    let fenceZ = -15;
-    let fenceDirection = 0; // 0 = right, 1 = down, 2 = left, 3 = up
-    
-    for (let i = 0; i < fenceSegments; i++) {
-      const y = this.terrain.getHeightAt(fenceX, fenceZ);
+      // Distance from center (vary to create interesting distribution)
+      const distance = 30 + Math.random() * 40;
       
-      await this.createFence(fenceX, y, fenceZ, fenceDirection * Math.PI / 2);
+      // House position
+      const houseX = Math.cos(angle) * distance;
+      const houseZ = Math.sin(angle) * distance;
+      const houseY = this.terrain.getHeightAt(houseX, houseZ);
       
-      // Move to next fence position
-      if (fenceDirection === 0) fenceX += 2;
-      else if (fenceDirection === 1) fenceZ += 2;
-      else if (fenceDirection === 2) fenceX -= 2;
-      else if (fenceDirection === 3) fenceZ -= 2;
+      // House rotation (usually faces a cardinal direction)
+      const cardinalDirections = [0, Math.PI/2, Math.PI, Math.PI*1.5];
+      const houseRotation = cardinalDirections[Math.floor(Math.random() * cardinalDirections.length)];
       
-      // Change direction to create rectangle
-      if ((i + 1) % 10 === 0) {
-        fenceDirection = (fenceDirection + 1) % 4;
+      // Create house
+      const house = await this.createHouse(houseX, houseY, houseZ, houseRotation);
+      
+      // Add the house as an obstacle
+      this.terrain.addObstacle(house);
+      
+      // Create a fenced yard around the house
+      // Generate a rectangular fenced area
+      const yardWidth = 10 + Math.random() * 5;
+      const yardDepth = 10 + Math.random() * 5;
+      
+      // Calculate fence corners based on house orientation
+      const corners = [
+        new THREE.Vector3(houseX - yardWidth/2, 0, houseZ - yardDepth/2),
+        new THREE.Vector3(houseX + yardWidth/2, 0, houseZ - yardDepth/2),
+        new THREE.Vector3(houseX + yardWidth/2, 0, houseZ + yardDepth/2),
+        new THREE.Vector3(houseX - yardWidth/2, 0, houseZ + yardDepth/2)
+      ];
+      
+      // Rotate corners around house based on house rotation
+      for (let i = 0; i < corners.length; i++) {
+        corners[i].sub(new THREE.Vector3(houseX, 0, houseZ));
+        corners[i].applyAxisAngle(new THREE.Vector3(0, 1, 0), houseRotation);
+        corners[i].add(new THREE.Vector3(houseX, 0, houseZ));
       }
+      
+      // Create fence segments between corners
+      for (let i = 0; i < corners.length; i++) {
+        const start = corners[i];
+        const end = corners[(i + 1) % corners.length];
+        
+        // Calculate number of fence segments based on distance
+        const distance = start.distanceTo(end);
+        const segments = Math.ceil(distance / 2); // fence segments every 2 units
+        
+        // Create fence posts along the line
+        for (let j = 0; j < segments; j++) {
+          const t = j / segments;
+          const fenceX = start.x + (end.x - start.x) * t;
+          const fenceZ = start.z + (end.z - start.z) * t;
+          const fenceY = this.terrain.getHeightAt(fenceX, fenceZ);
+          
+          // Calculate fence orientation (perpendicular to fence line)
+          const direction = Math.atan2(end.z - start.z, end.x - start.x) + Math.PI/2;
+          
+          const fence = await this.createFence(fenceX, fenceY, fenceZ, direction);
+          
+          // Add fence as obstacle
+          this.terrain.addObstacle(fence);
+        }
+      }
+      
+      // Add a garden inside the yard
+      const gardenOffset = new THREE.Vector3(
+        (Math.random() - 0.5) * yardWidth * 0.5, 
+        0, 
+        (Math.random() - 0.5) * yardDepth * 0.5
+      );
+      gardenOffset.applyAxisAngle(new THREE.Vector3(0, 1, 0), houseRotation);
+      
+      const gardenX = houseX + gardenOffset.x;
+      const gardenZ = houseZ + gardenOffset.z;
+      const gardenY = this.terrain.getHeightAt(gardenX, gardenZ);
+      
+      await this.createGarden(gardenX, gardenY, gardenZ);
+      
+      // Add a shed or mailbox with some probability
+      if (Math.random() > 0.5) {
+        const shedOffset = new THREE.Vector3(
+          (Math.random() - 0.5) * yardWidth * 0.6, 
+          0, 
+          (Math.random() - 0.5) * yardDepth * 0.6
+        );
+        shedOffset.applyAxisAngle(new THREE.Vector3(0, 1, 0), houseRotation);
+        
+        const shedX = houseX + shedOffset.x;
+        const shedZ = houseZ + shedOffset.z;
+        const shedY = this.terrain.getHeightAt(shedX, shedZ);
+        const shedRotation = Math.random() * Math.PI * 2;
+        
+        const shed = await this.createShed(shedX, shedY, shedZ, shedRotation);
+        this.terrain.addObstacle(shed);
+      }
+      
+      // Add a mailbox at the edge of the property
+      const mailboxOffset = new THREE.Vector3(0, 0, -yardDepth/2);
+      mailboxOffset.applyAxisAngle(new THREE.Vector3(0, 1, 0), houseRotation);
+      
+      const mailboxX = houseX + mailboxOffset.x;
+      const mailboxZ = houseZ + mailboxOffset.z;
+      const mailboxY = this.terrain.getHeightAt(mailboxX, mailboxZ);
+      
+      await this.createMailbox(mailboxX, mailboxY, mailboxZ);
     }
     
-    // Generate garden
-    await this.createGarden(10, this.terrain.getHeightAt(10, 10), 10);
+    // Generate trees scattered throughout the terrain
+    const treeCount = 30;
+    for (let i = 0; i < treeCount; i++) {
+      // Wide distribution of trees
+      const treeDistance = 10 + Math.random() * 100;
+      const treeAngle = Math.random() * Math.PI * 2;
+      
+      const x = Math.cos(treeAngle) * treeDistance;
+      const z = Math.sin(treeAngle) * treeDistance;
+      const y = this.terrain.getHeightAt(x, z);
+      
+      const tree = await this.createTree(x, y, z);
+      
+      // Add tree as obstacle
+      this.terrain.addObstacle(tree);
+    }
     
-    // Generate shed
-    await this.createShed(-12, this.terrain.getHeightAt(-12, 8), 8, Math.PI / 4);
-    
-    // Generate mailbox
-    await this.createMailbox(15, this.terrain.getHeightAt(15, -15), -15);
-    
-    // Generate bench
-    await this.createBench(5, this.terrain.getHeightAt(5, -10), -10, Math.PI);
+    // Add some benches in random locations
+    const benchCount = 3;
+    for (let i = 0; i < benchCount; i++) {
+      const benchDistance = 15 + Math.random() * 40;
+      const benchAngle = Math.random() * Math.PI * 2;
+      
+      const x = Math.cos(benchAngle) * benchDistance;
+      const z = Math.sin(benchAngle) * benchDistance;
+      const y = this.terrain.getHeightAt(x, z);
+      
+      await this.createBench(x, y, z, Math.random() * Math.PI * 2);
+    }
   }
   
   private clearScenery() {

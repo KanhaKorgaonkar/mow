@@ -158,25 +158,31 @@ export class PlayerControls {
   }
   
   public update(delta: number) {
-    // Handle movement
-    if (this.moveForward) {
+    // Set reverse state based on inputs
+    if (this.moveBackward && !this.moveForward) {
+      // Only try to go in reverse if we're specifically pressing the reverse button
+      this.mower.setReverse(true);
+    } else if (this.moveForward) {
+      // Forward takes priority over reverse
+      this.mower.setReverse(false);
+    }
+    
+    // Handle movement - we send 'true' if we're actively accelerating
+    if (this.moveForward || this.moveBackward) {
       this.mower.moveForward(true, delta);
-    } else if (this.moveBackward) {
-      // Implement reverse motion if needed
-      this.mower.moveForward(false, delta);
     } else {
-      // Decelerate
+      // No movement input - let car naturally coast with friction
       this.mower.moveForward(false, delta);
     }
     
-    // Handle turning
+    // Handle turning - car-like turning depends on speed
     if (this.turnLeft) {
       this.mower.turn('left', delta);
     } else if (this.turnRight) {
       this.mower.turn('right', delta);
     }
     
-    // Update mower physics
+    // Update mower physics (handles wheel return, etc.)
     this.mower.update(delta);
     
     // Update camera position based on mower position and direction

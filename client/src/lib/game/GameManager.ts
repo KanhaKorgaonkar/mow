@@ -195,7 +195,7 @@ export class GameManager {
     // Check for collisions with obstacles
     const playerPosition = this.lawnMower.getPosition();
     if (this.terrain.checkCollision(playerPosition, 0.6)) {
-      // Collision detected, stop the mower movement
+      // Collision detected, trigger bounce-back effect
       this.lawnMower.handleCollision();
     }
     
