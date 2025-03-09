@@ -11,12 +11,12 @@ export class WeatherSystem {
   private currentWeather: WeatherType = 'Sunny';
   private nextWeather: WeatherType = 'Sunny';
   private weatherTransitionTime: number = 0;
-  private weatherTransitionDuration: number = 10; // seconds
-  private weatherDuration: number = 120; // seconds between weather changes
+  private weatherTransitionDuration: number = 15; // seconds (increased)
+  private weatherDuration: number = 300; // seconds between weather changes (increased)
   private weatherTimer: number = 0;
-  private currentTime: number = 0; // seconds since day start
+  private currentTime: number = 200; // starting at daytime (around 1pm)
   private dayDuration: number = 600; // seconds for one day/night cycle
-  private timeString: string = '10:30';
+  private timeString: string = '13:00';
   
   private onWeatherChange: (weather: string) => void;
   private onTimeChange: (time: string) => void;
