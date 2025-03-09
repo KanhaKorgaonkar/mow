@@ -4,10 +4,6 @@ uniform float time;
 uniform float windStrength;
 uniform float mowedHeight;
 
-attribute vec3 position;
-attribute vec3 normal;
-attribute vec2 uv;
-
 varying vec2 vUv;
 varying vec3 vNormal;
 
