@@ -107,6 +107,23 @@ export class PlayerControls {
     document.addEventListener('pointerlockchange', () => {
       this.isLocked = document.pointerLockElement !== null;
     });
+    
+    // Fallback for when pointer lock is not available
+    document.addEventListener('keydown', (event) => {
+      if (!this.isLocked) return;
+      
+      // Use Q and E for camera rotation when pointer lock isn't available
+      switch (event.code) {
+        case 'KeyQ':
+          this.euler.y += 0.05;
+          this.camera.quaternion.setFromEuler(this.euler);
+          break;
+        case 'KeyE':
+          this.euler.y -= 0.05;
+          this.camera.quaternion.setFromEuler(this.euler);
+          break;
+      }
+    });
   }
   
   private initTouchControls() {
@@ -179,13 +196,24 @@ export class PlayerControls {
   public lock() {
     const canvas = document.querySelector('canvas');
     if (canvas) {
-      canvas.requestPointerLock();
+      try {
+        canvas.requestPointerLock();
+      } catch (error) {
+        console.warn("Pointer lock failed:", error);
+        // Set a flag to use keyboard-only controls
+        this.isLocked = true;
+      }
     }
   }
   
   public unlock() {
-    if (document.pointerLockElement) {
-      document.exitPointerLock();
+    try {
+      if (document.pointerLockElement) {
+        document.exitPointerLock();
+      }
+    } catch (error) {
+      console.warn("Exit pointer lock failed:", error);
+      this.isLocked = false;
     }
   }
 }

@@ -8,6 +8,40 @@ interface GameHUDProps {
   mowerRunning: boolean;
 }
 
+
+import { useState, useEffect } from 'react';
+
+// Add a component for fallback controls message
+export function FallbackControlsInfo() {
+  const [showMessage, setShowMessage] = useState(false);
+  
+  useEffect(() => {
+    // Check if pointer lock fails after a short delay
+    const timer = setTimeout(() => {
+      if (!document.pointerLockElement) {
+        setShowMessage(true);
+      }
+    }, 2000);
+    
+    return () => clearTimeout(timer);
+  }, []);
+  
+  if (!showMessage) return null;
+  
+  return (
+    <div className="absolute top-4 right-4 bg-black/70 text-white p-3 rounded-md max-w-xs text-sm">
+      <p className="font-bold mb-1">Fallback Controls Active:</p>
+      <p>Use Q and E keys to look left and right</p>
+      <button 
+        onClick={() => setShowMessage(false)}
+        className="text-xs text-gray-400 mt-2 hover:text-white"
+      >
+        Dismiss
+      </button>
+    </div>
+  );
+}
+
 export default function GameHUD({ onPause, weather, timeOfDay, mowedArea, mowerRunning }: GameHUDProps) {
   const [showMobileControls, setShowMobileControls] = useState(false);
 

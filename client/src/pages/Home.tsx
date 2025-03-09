@@ -43,7 +43,9 @@ export default function Home() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [gameState, pauseGame, toggleMower]);
 
-  // Handle pointer lock for first-person control
+  import { FallbackControlsInfo } from '../components/GameHUD';
+
+// Handle pointer lock for first-person control
   useEffect(() => {
     const gameCanvas = document.getElementById('game-canvas');
     
@@ -73,13 +75,16 @@ export default function Home() {
       {gameState === 'start' && <StartScreen onStart={startGame} />}
       {gameState === 'loading' && <LoadingScreen progress={loadingProgress} />}
       {gameState === 'playing' && (
-        <GameHUD 
-          onPause={pauseGame} 
-          weather={weather}
-          timeOfDay={timeOfDay}
-          mowedArea={mowedArea}
-          mowerRunning={mowerRunning}
-        />
+        <>
+          <GameHUD 
+            onPause={pauseGame} 
+            weather={weather}
+            timeOfDay={timeOfDay}
+            mowedArea={mowedArea}
+            mowerRunning={mowerRunning}
+          />
+          <FallbackControlsInfo />
+        </>
       )}
       {gameState === 'paused' && (
         <PauseMenu 
