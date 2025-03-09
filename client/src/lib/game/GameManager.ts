@@ -66,7 +66,7 @@ export class GameManager {
     this.clock = new THREE.Clock();
     
     // Initialize systems
-    this.terrain = new TerrainGenerator(this.scene, 100, 100);
+    this.terrain = new TerrainGenerator(this.scene, 150, 150); // Larger initial area for better generation
     this.grassSystem = new GrassSystem(this.scene, this.terrain);
     this.weatherSystem = new WeatherSystem(this.scene, (weather) => {
       this.callbacks.onWeatherChange(weather);
@@ -188,6 +188,16 @@ export class GameManager {
     // Update all systems
     this.playerControls.update(delta);
     this.weatherSystem.update(delta);
+    
+    // Update terrain based on player position for infinite terrain
+    this.terrain.updateTerrain(this.lawnMower.getPosition());
+    
+    // Check for collisions with obstacles
+    const playerPosition = this.lawnMower.getPosition();
+    if (this.terrain.checkCollision(playerPosition, 0.6)) {
+      // Collision detected, stop the mower movement
+      this.lawnMower.handleCollision();
+    }
     
     if (this.mowerRunning) {
       // Check for grass cutting

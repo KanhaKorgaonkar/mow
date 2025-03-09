@@ -1,102 +1,173 @@
 import * as THREE from 'three';
 import { createNoise2D } from 'simplex-noise';
 
+interface TerrainChunk {
+  mesh: THREE.Mesh;
+  heightMap: number[][];
+}
+
 export class TerrainGenerator {
   private scene: THREE.Scene;
-  private terrain: THREE.Mesh | null = null;
-  private width: number;
-  private depth: number;
-  private heightMap: number[][] = [];
-  private gridSize = 1; // Size of each grid cell
+  private chunks: Map<string, TerrainChunk> = new Map();
+  private chunkSize: number = 50; // Size of each terrain chunk
+  private chunkResolution: number = 1; // Grid size within chunk
+  private visibleDistance: number = 2; // Number of chunks visible in each direction
+  private maxHeight: number = 1.2; // Maximum terrain height
   private noise2D: (x: number, y: number) => number;
+  private seed: number; // Random seed for terrain generation
+  
+  // Obstacles for collision detection
+  private obstacles: THREE.Object3D[] = [];
   
   constructor(scene: THREE.Scene, width: number, depth: number) {
     this.scene = scene;
-    this.width = width;
-    this.depth = depth;
     this.noise2D = createNoise2D();
+    // Generate random seed for terrain variation between game sessions
+    this.seed = Math.random() * 10000;
   }
   
   public async initialize() {
-    // Generate height map using Perlin noise
-    this.generateHeightMap();
+    // Generate initial terrain around origin
+    await this.updateTerrain(new THREE.Vector3(0, 0, 0));
+    return true;
+  }
+  
+  // Update terrain chunks based on player position
+  public async updateTerrain(playerPosition: THREE.Vector3) {
+    const playerChunkX = Math.floor(playerPosition.x / this.chunkSize);
+    const playerChunkZ = Math.floor(playerPosition.z / this.chunkSize);
+    
+    // Keep track of chunks that should be visible
+    const chunksToKeep = new Set<string>();
+    
+    // Generate/show chunks within visible distance
+    for (let x = playerChunkX - this.visibleDistance; x <= playerChunkX + this.visibleDistance; x++) {
+      for (let z = playerChunkZ - this.visibleDistance; z <= playerChunkZ + this.visibleDistance; z++) {
+        const chunkKey = `${x},${z}`;
+        chunksToKeep.add(chunkKey);
+        
+        // Create chunk if it doesn't exist
+        if (!this.chunks.has(chunkKey)) {
+          await this.createChunk(x, z);
+        }
+      }
+    }
+    
+    // Remove chunks that are too far away
+    Array.from(this.chunks.entries()).forEach(([key, chunk]) => {
+      if (!chunksToKeep.has(key)) {
+        this.scene.remove(chunk.mesh);
+        chunk.mesh.geometry.dispose();
+        if (chunk.mesh.material instanceof THREE.Material) {
+          chunk.mesh.material.dispose();
+        }
+        this.chunks.delete(key);
+      }
+    });
+  }
+  
+  private async createChunk(chunkX: number, chunkZ: number) {
+    const chunkKey = `${chunkX},${chunkZ}`;
+    
+    // Generate height map for this chunk
+    const heightMap = this.generateChunkHeightMap(chunkX, chunkZ);
     
     // Create terrain geometry
     const geometry = new THREE.PlaneGeometry(
-      this.width,
-      this.depth,
-      this.width / this.gridSize,
-      this.depth / this.gridSize
+      this.chunkSize,
+      this.chunkSize,
+      this.chunkSize / this.chunkResolution,
+      this.chunkSize / this.chunkResolution
     );
     
     // Apply height map to geometry
-    this.applyHeightMap(geometry);
+    this.applyHeightMapToGeometry(geometry, heightMap);
     
-    // Create material with grass texture
+    // Create material
     const material = new THREE.MeshStandardMaterial({
-      color: 0x7CFC00,
+      color: 0x7CFC00, // Grass green color
       roughness: 0.8,
       metalness: 0.1
     });
     
     // Create mesh
-    this.terrain = new THREE.Mesh(geometry, material);
-    this.terrain.rotation.x = -Math.PI / 2; // Rotate to horizontal
-    this.terrain.receiveShadow = true;
-    this.scene.add(this.terrain);
+    const mesh = new THREE.Mesh(geometry, material);
+    mesh.rotation.x = -Math.PI / 2; // Rotate to be horizontal
+    mesh.position.set(
+      chunkX * this.chunkSize,
+      0,
+      chunkZ * this.chunkSize
+    );
+    mesh.receiveShadow = true;
     
-    return true;
+    // Add to scene
+    this.scene.add(mesh);
+    
+    // Store chunk
+    this.chunks.set(chunkKey, { mesh, heightMap });
+    
+    return { mesh, heightMap };
   }
   
-  private generateHeightMap() {
-    const gridX = Math.ceil(this.width / this.gridSize) + 1;
-    const gridZ = Math.ceil(this.depth / this.gridSize) + 1;
+  private generateChunkHeightMap(chunkX: number, chunkZ: number): number[][] {
+    const gridSize = Math.ceil(this.chunkSize / this.chunkResolution) + 1;
+    const heightMap: number[][] = [];
     
-    this.heightMap = [];
-    
-    // Generate height map using multiple octaves of Perlin noise
-    for (let z = 0; z < gridZ; z++) {
-      this.heightMap[z] = [];
-      for (let x = 0; x < gridX; x++) {
-        // Convert grid coordinates to world coordinates
-        const worldX = (x * this.gridSize) - (this.width / 2);
-        const worldZ = (z * this.gridSize) - (this.depth / 2);
+    for (let z = 0; z < gridSize; z++) {
+      heightMap[z] = [];
+      for (let x = 0; x < gridSize; x++) {
+        // Convert local grid coordinates to world coordinates
+        const worldX = (chunkX * this.chunkSize) + (x * this.chunkResolution);
+        const worldZ = (chunkZ * this.chunkSize) + (z * this.chunkResolution);
         
-        // Generate height using multiple octaves of noise
-        let height = 0;
-        let amplitude = 0.5;
-        let frequency = 0.02;
-        
-        // Add multiple octaves of noise
-        for (let octave = 0; octave < 4; octave++) {
-          height += this.noise2D(worldX * frequency, worldZ * frequency) * amplitude;
-          amplitude *= 0.5;
-          frequency *= 2;
-        }
-        
-        // Scale and offset height
-        height *= 1.0; // Overall height scale
-        height = Math.max(0, height); // Ensure minimum height is 0
-        
-        this.heightMap[z][x] = height;
+        // Generate height using noise with seed
+        heightMap[z][x] = this.calculateHeightAt(worldX, worldZ);
       }
     }
+    
+    return heightMap;
   }
   
-  private applyHeightMap(geometry: THREE.PlaneGeometry) {
+  private calculateHeightAt(x: number, z: number): number {
+    // Add seed to coordinates for variation between game sessions
+    const nx = x * 0.02 + this.seed;
+    const nz = z * 0.02 + this.seed;
+    
+    // Generate base height using noise
+    let height = 0;
+    let amplitude = 0.5;
+    let frequency = 1;
+    
+    // Add multiple octaves of noise
+    for (let octave = 0; octave < 4; octave++) {
+      height += this.noise2D(nx * frequency, nz * frequency) * amplitude;
+      amplitude *= 0.5;
+      frequency *= 2;
+    }
+    
+    // Normalize and scale
+    height = (height + 1) * 0.5; // Convert from -1..1 to 0..1
+    height = Math.pow(height, 1.5); // Flatter terrain with fewer hills
+    height *= this.maxHeight; // Scale to max height
+    
+    return height;
+  }
+  
+  private applyHeightMapToGeometry(geometry: THREE.PlaneGeometry, heightMap: number[][]) {
     const vertices = geometry.attributes.position.array;
+    const gridSize = Math.ceil(this.chunkSize / this.chunkResolution) + 1;
     
     // Update vertex positions based on height map
     for (let i = 0; i < vertices.length; i += 3) {
       // Convert vertex index to grid coordinates
       const vertexIndex = i / 3;
-      const gridX = vertexIndex % (this.width / this.gridSize + 1);
-      const gridZ = Math.floor(vertexIndex / (this.width / this.gridSize + 1));
+      const gridX = vertexIndex % gridSize;
+      const gridZ = Math.floor(vertexIndex / gridSize);
       
       // Get height from height map
-      const height = this.heightMap[gridZ][gridX];
+      const height = heightMap[gridZ][gridX];
       
-      // Apply height to vertex
+      // Apply height to vertex y position (note: when rotated, y becomes up)
       vertices[i + 2] = height;
     }
     
@@ -106,23 +177,45 @@ export class TerrainGenerator {
   }
   
   public getHeightAt(x: number, z: number): number {
-    // Convert world coordinates to grid coordinates
-    const gridX = Math.floor((x + (this.width / 2)) / this.gridSize);
-    const gridZ = Math.floor((z + (this.depth / 2)) / this.gridSize);
+    // Find which chunk contains this position
+    const chunkX = Math.floor(x / this.chunkSize);
+    const chunkZ = Math.floor(z / this.chunkSize);
+    const chunkKey = `${chunkX},${chunkZ}`;
     
-    // Clamp grid coordinates to valid range
-    const clampedGridX = Math.max(0, Math.min(gridX, this.heightMap[0].length - 2));
-    const clampedGridZ = Math.max(0, Math.min(gridZ, this.heightMap.length - 2));
+    // If chunk doesn't exist, calculate height algorithmically
+    if (!this.chunks.has(chunkKey)) {
+      return this.calculateHeightAt(x, z);
+    }
     
-    // Get heights at surrounding grid points
-    const h00 = this.heightMap[clampedGridZ][clampedGridX];
-    const h10 = this.heightMap[clampedGridZ][clampedGridX + 1];
-    const h01 = this.heightMap[clampedGridZ + 1][clampedGridX];
-    const h11 = this.heightMap[clampedGridZ + 1][clampedGridX + 1];
+    // Get local coordinates within chunk
+    const localX = x - (chunkX * this.chunkSize);
+    const localZ = z - (chunkZ * this.chunkSize);
     
-    // Calculate fractional position within grid cell
-    const fx = ((x + (this.width / 2)) / this.gridSize) - clampedGridX;
-    const fz = ((z + (this.depth / 2)) / this.gridSize) - clampedGridZ;
+    // Convert to grid coordinates
+    const chunk = this.chunks.get(chunkKey)!;
+    const gridX = Math.floor(localX / this.chunkResolution);
+    const gridZ = Math.floor(localZ / this.chunkResolution);
+    
+    // Clamp to valid range
+    const gridSizeX = chunk.heightMap[0].length - 1;
+    const gridSizeZ = chunk.heightMap.length - 1;
+    const clampedGridX = Math.max(0, Math.min(gridX, gridSizeX));
+    const clampedGridZ = Math.max(0, Math.min(gridZ, gridSizeZ));
+    
+    // Get heights of surrounding grid points for interpolation
+    const x0 = Math.min(clampedGridX, gridSizeX - 1);
+    const x1 = Math.min(x0 + 1, gridSizeX);
+    const z0 = Math.min(clampedGridZ, gridSizeZ - 1);
+    const z1 = Math.min(z0 + 1, gridSizeZ);
+    
+    const h00 = chunk.heightMap[z0][x0];
+    const h10 = chunk.heightMap[z0][x1];
+    const h01 = chunk.heightMap[z1][x0];
+    const h11 = chunk.heightMap[z1][x1];
+    
+    // Calculate fractional position for interpolation
+    const fx = (localX / this.chunkResolution) - x0;
+    const fz = (localZ / this.chunkResolution) - z0;
     
     // Bilinear interpolation
     const top = h00 * (1 - fx) + h10 * fx;
@@ -133,20 +226,70 @@ export class TerrainGenerator {
   }
   
   public getSize() {
+    // Return visible terrain size (in practice, this is infinite)
     return {
-      width: this.width,
-      depth: this.depth
+      width: this.chunkSize * (this.visibleDistance * 2 + 1),
+      depth: this.chunkSize * (this.visibleDistance * 2 + 1)
     };
   }
   
-  public reset() {
-    // Regenerate terrain with new randomization
-    if (this.terrain) {
-      this.scene.remove(this.terrain);
-      this.terrain.geometry.dispose();
-      this.terrain = null;
+  public addObstacle(obstacle: THREE.Object3D) {
+    this.obstacles.push(obstacle);
+  }
+  
+  public removeObstacle(obstacle: THREE.Object3D) {
+    const index = this.obstacles.indexOf(obstacle);
+    if (index !== -1) {
+      this.obstacles.splice(index, 1);
+    }
+  }
+  
+  public checkCollision(position: THREE.Vector3, radius: number = 0.5): boolean {
+    // Check collision with obstacles
+    for (const obstacle of this.obstacles) {
+      // Simple distance-based collision
+      const obstaclePos = new THREE.Vector3();
+      obstacle.getWorldPosition(obstaclePos);
+      
+      // Use obstacle's bounding box for collision size
+      const boundingBox = new THREE.Box3().setFromObject(obstacle);
+      const size = new THREE.Vector3();
+      boundingBox.getSize(size);
+      
+      // Approximate collision radius
+      const obstacleRadius = (size.x + size.z) / 4;
+      
+      // Check distance-based collision
+      const distance = position.distanceTo(obstaclePos);
+      if (distance < (radius + obstacleRadius)) {
+        return true;
+      }
     }
     
+    return false;
+  }
+  
+  public reset() {
+    // Remove all chunks
+    Array.from(this.chunks.entries()).forEach(([key, chunk]) => {
+      this.scene.remove(chunk.mesh);
+      chunk.mesh.geometry.dispose();
+      if (chunk.mesh.material instanceof THREE.Material) {
+        chunk.mesh.material.dispose();
+      }
+    });
+    this.chunks.clear();
+    
+    // Clear all obstacles
+    for (const obstacle of this.obstacles) {
+      this.scene.remove(obstacle);
+    }
+    this.obstacles = [];
+    
+    // Generate new seed for terrain variation
+    this.seed = Math.random() * 10000;
+    
+    // Initialize terrain again
     this.initialize();
   }
 }
