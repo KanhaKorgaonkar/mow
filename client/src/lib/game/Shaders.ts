@@ -1,4 +1,4 @@
-// Grass vertex shader for realistic grass swaying
+// Simplified grass vertex shader
 export const grassVertexShader = `
 uniform float time;
 uniform float windStrength;
@@ -11,32 +11,17 @@ void main() {
   vUv = uv;
   vNormal = normal;
   
-  // Get instance matrix data
-  mat4 instanceMatrix = instanceMatrix;
-  
-  // Extract scale from instance matrix to determine if grass is mowed
-  float scaleY = length(vec3(instanceMatrix[1].x, instanceMatrix[1].y, instanceMatrix[1].z));
-  
-  // Apply wind effect (only to the top of grass blades and only if not mowed)
+  // Basic wind effect
   vec3 pos = position;
   
-  if (scaleY > 0.3 && position.y > 0.1) {
-    // Wind strength increases with height
-    float windFactor = (position.y / 0.3) * windStrength;
-    
-    // Wind movement based on position and time
-    float windX = sin(time * 2.0 + position.x * 10.0 + position.z * 10.0) * windFactor;
-    float windZ = cos(time * 2.0 + position.x * 10.0 + position.z * 10.0) * windFactor;
-    
-    pos.x += windX;
-    pos.z += windZ;
+  // Simple wave effect on top portion of grass
+  if (position.y > 0.1) {
+    float windFactor = position.y * windStrength;
+    pos.x += sin(time * 2.0 + position.z * 10.0) * windFactor;
   }
   
-  // Apply instance transformation
-  vec4 worldPosition = instanceMatrix * vec4(pos, 1.0);
-  
-  // Project to screen
-  gl_Position = projectionMatrix * viewMatrix * worldPosition;
+  // Apply instance transformation and projection
+  gl_Position = projectionMatrix * modelViewMatrix * instanceMatrix * vec4(pos, 1.0);
 }
 `;
 

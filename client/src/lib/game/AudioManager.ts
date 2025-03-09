@@ -1,132 +1,55 @@
-import { Howl, Howler } from 'howler';
-
+// Simplified AudioManager for debugging
 export class AudioManager {
-  private sounds: {
-    ambient: Howl | null;
-    mower: Howl | null;
-    grassCut: Howl | null;
-    discovery: Howl | null;
-    rain: Howl | null;
-    thunder: Howl | null;
-  };
-  
   constructor() {
-    this.sounds = {
-      ambient: null,
-      mower: null,
-      grassCut: null,
-      discovery: null,
-      rain: null,
-      thunder: null
-    };
+    console.log("AudioManager created");
   }
   
   public async initialize() {
-    // Load audio files
-    this.sounds.ambient = new Howl({
-      src: ['https://assets.codepen.io/123446/birds-nature-ambient.mp3'],
-      loop: true,
-      volume: 0.3,
-      html5: true
-    });
-    
-    this.sounds.mower = new Howl({
-      src: ['https://assets.codepen.io/123446/lawn-mower-engine.mp3'],
-      loop: true,
-      volume: 0.5,
-      html5: true
-    });
-    
-    this.sounds.grassCut = new Howl({
-      src: ['https://assets.codepen.io/123446/grass-cut.mp3'],
-      volume: 0.4,
-      html5: true
-    });
-    
-    this.sounds.discovery = new Howl({
-      src: ['https://assets.codepen.io/123446/discovery-chime.mp3'],
-      volume: 0.5,
-      html5: true
-    });
-    
-    this.sounds.rain = new Howl({
-      src: ['https://assets.codepen.io/123446/rain-sound.mp3'],
-      loop: true,
-      volume: 0.4,
-      html5: true
-    });
-    
-    this.sounds.thunder = new Howl({
-      src: ['https://assets.codepen.io/123446/thunder-crack.mp3'],
-      volume: 0.6,
-      html5: true
-    });
-    
+    console.log("AudioManager initialized");
     return true;
   }
   
   public playAmbient() {
-    if (this.sounds.ambient) {
-      this.sounds.ambient.play();
-    }
+    console.log("Playing ambient sound");
   }
   
   public playMower() {
-    if (this.sounds.mower) {
-      this.sounds.mower.play();
-    }
+    console.log("Playing mower sound");
   }
   
   public pauseMower() {
-    if (this.sounds.mower) {
-      this.sounds.mower.pause();
-    }
+    console.log("Pausing mower sound");
   }
   
   public playGrassCut() {
-    if (this.sounds.grassCut) {
-      // Clone to allow multiple overlapping sounds
-      this.sounds.grassCut.play();
-    }
+    console.log("Playing grass cut sound");
   }
   
   public playDiscovery() {
-    if (this.sounds.discovery) {
-      this.sounds.discovery.play();
-    }
+    console.log("Playing discovery sound");
   }
   
   public playRain() {
-    if (this.sounds.rain) {
-      this.sounds.rain.play();
-    }
+    console.log("Playing rain sound");
   }
   
   public pauseRain() {
-    if (this.sounds.rain) {
-      this.sounds.rain.pause();
-    }
+    console.log("Pausing rain sound");
   }
   
   public playThunder() {
-    if (this.sounds.thunder) {
-      this.sounds.thunder.play();
-    }
+    console.log("Playing thunder sound");
   }
   
   public pauseAll() {
-    Howler.volume(0);
+    console.log("Pausing all sounds");
   }
   
   public resumeAll() {
-    Howler.volume(1);
+    console.log("Resuming all sounds");
   }
   
   public stopAll() {
-    Object.values(this.sounds).forEach(sound => {
-      if (sound) {
-        sound.stop();
-      }
-    });
+    console.log("Stopping all sounds");
   }
 }
