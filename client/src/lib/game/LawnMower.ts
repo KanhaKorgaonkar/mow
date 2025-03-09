@@ -25,16 +25,22 @@ export class LawnMower {
     wheelAngle: 0
   };
   
-  // Movement parameters (reduced for better control)
-  private maxSpeed: number = 2.0; // meters per second, reduced from 3.0
-  private acceleration: number = 1.5; // reduced from 3.0
-  private deceleration: number = 3.0; // reduced from 5.0
+  // Movement parameters
+  private maxSpeedRunning: number = 2.0; // meters per second when mower is running
+  private maxSpeedOff: number = 3.0; // meters per second when mower is off (faster)
+  private accelerationRunning: number = 1.5;
+  private accelerationOff: number = 2.0; // faster acceleration when off
+  private deceleration: number = 3.0;
   private maxReverseSpeed: number = 1.0; // max reverse speed
   private maxWheelAngle: number = Math.PI / 4; // 45 degrees max steering angle
   private wheelTurnSpeed: number = 2.0; // how fast wheels turn
   private wheelReturnSpeed: number = 3.0; // how fast wheels center themselves
   private turnInfluence: number = 0.8; // how much turning affects movement at low speeds
   private friction: number = 0.98; // friction to gradually slow down
+  
+  // Current speed parameters (will be set based on running state)
+  private maxSpeed: number = 2.0;
+  private acceleration: number = 1.5;
   
   private isRunning: boolean = false;
   private bladeRotation: number = 0;
@@ -44,6 +50,10 @@ export class LawnMower {
   constructor(scene: THREE.Scene, terrain: TerrainGenerator) {
     this.scene = scene;
     this.terrain = terrain;
+    
+    // Initialize speed parameters based on mower state (initially off)
+    this.maxSpeed = this.maxSpeedOff;
+    this.acceleration = this.accelerationOff;
     
     // Create mower group
     this.mowerObject = new THREE.Group();
@@ -123,10 +133,16 @@ export class LawnMower {
   
   public start() {
     this.isRunning = true;
+    // When mower starts, use the running speed parameters (slower)
+    this.maxSpeed = this.maxSpeedRunning;
+    this.acceleration = this.accelerationRunning;
   }
   
   public stop() {
     this.isRunning = false;
+    // When mower stops, use the off speed parameters (faster)
+    this.maxSpeed = this.maxSpeedOff;
+    this.acceleration = this.accelerationOff;
   }
   
   // Handle collisions with obstacles

@@ -53,14 +53,18 @@ export class AudioManager {
         src: [base64AudioData],
         volume: 0.3,
         rate: 1.5,  // Higher pitch
-        duration: 0.3 // Short clip
+        sprite: {
+          short: [0, 300] // Create a 300ms sprite for the short clip
+        }
       });
       
       this.sounds.discovery = new Howl({
         src: [base64AudioData],
         volume: 0.5,
         rate: 0.8,  // Lower pitch
-        duration: 1.0
+        sprite: {
+          medium: [0, 1000] // Create a 1000ms sprite for medium length
+        }
       });
       
       this.sounds.rain = new Howl({
@@ -101,13 +105,13 @@ export class AudioManager {
   public playGrassCut() {
     if (this.sounds.grassCut) {
       // Play a fresh instance to allow overlapping sounds
-      this.sounds.grassCut.play();
+      this.sounds.grassCut.play('short');
     }
   }
   
   public playDiscovery() {
     if (this.sounds.discovery) {
-      this.sounds.discovery.play();
+      this.sounds.discovery.play('medium');
     }
   }
   
