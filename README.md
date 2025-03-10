@@ -33,7 +33,7 @@ npm install
 npm run dev
 ```
 
-4. Open your browser and navigate to the URL shown in the terminal (typically http://localhost:5000)
+4. Open your browser and navigate to the URL shown in the terminal (typically http://localhost:5001)
 
 ## Controls
 
