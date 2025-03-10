@@ -39,6 +39,10 @@ export default function LoadingScreen({ progress }: LoadingScreenProps) {
         <div className="mt-8 text-center text-gray-500 text-sm italic">
           "{randomQuote()}"
         </div>
+        
+        <div className="mt-4 text-center text-amber-500 text-xs">
+          For the best experience, play some relaxing music in the background as you mow.
+        </div>
       </div>
     </div>
   );
