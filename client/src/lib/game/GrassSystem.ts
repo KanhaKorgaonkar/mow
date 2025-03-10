@@ -11,7 +11,7 @@ export class GrassSystem {
   private grassPositions: Float32Array | null = null;
   private grassStates: Float32Array | null = null; // 0 = not mowed, 1 = mowed
   private grassMatrix: THREE.Matrix4 = new THREE.Matrix4();
-  private grassCount: number = 100000; // Number of grass instances - doubled for denser coverage
+  private grassCount: number = 1000000; // Number of grass instances - doubled for denser coverage
   private grassData: {
     position: THREE.Vector3;
     scale: number;

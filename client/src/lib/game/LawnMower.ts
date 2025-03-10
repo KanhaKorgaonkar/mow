@@ -19,14 +19,14 @@ export class LawnMower {
   private rotationSpeed: number = 2.5; // how fast the mower turns
   
   // Speed parameters - increased for faster gameplay
-  private maxSpeedRunning: number = 3.8; // meters per second when mower is running (increased from 2.5)
-  private maxSpeedOff: number = 5.5; // meters per second when mower is off (increased from 4.0)
-  private acceleration: number = 7.5; // faster acceleration for more responsive controls (increased from 6.0)
+  private maxSpeedRunning: number = 5.5; // meters per second when mower is running (increased from 2.5)
+  private maxSpeedOff: number = 3.8; // meters per second when mower is off (increased from 4.0)
+  private acceleration: number = 2.5; // faster acceleration for more responsive controls (increased from 6.0)
   private deceleration: number = 9.0; // faster slowdown for better control (increased from 8.0)
   private friction: number = 0.94; // slightly less friction for smoother gliding (increased from 0.92)
   
   // Current maximum speed (set based on running state)
-  private currentMaxSpeed: number = 5.5; // Updated to match maxSpeedOff
+  private currentMaxSpeed: number = 3.8; // Updated to match maxSpeedOff
   
   private isRunning: boolean = false;
   private bladeRotation: number = 0;
